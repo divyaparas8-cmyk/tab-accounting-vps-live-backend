@@ -199,8 +199,7 @@ const sendSmtpTestEmail = async ({ smtpConfig, toEmail, companyName }) => {
 /**
  * Generate Responsive HTML Email Template for Invoices
  */
-const generateInvoiceEmailHtml = ({ invoice, company, customMessage, downloadUrl, publicUrl }) => {
-    const finalDownloadUrl = downloadUrl || publicUrl;
+const generateInvoiceEmailHtml = ({ invoice, company, customMessage }) => {
     const companyName = company?.name || 'Tab Accounts';
     const vatNumber = company?.vatNumber || company?.gstNumber || '';
     const customerName = invoice?.customer?.name || invoice?.customerName || 'Valued Customer';
@@ -245,9 +244,6 @@ const generateInvoiceEmailHtml = ({ invoice, company, customMessage, downloadUrl
         .inv-value { font-weight: 700; color: #0f172a; }
         .total-row { border-top: 1px solid #e2e8f0; padding-top: 10px; margin-top: 10px; font-size: 16px; color: #0f172a; }
         .total-row .inv-value { font-size: 18px; font-weight: 800; color: #0f172a; }
-        .cta-container { text-align: center; margin: 26px 0; }
-        .btn-cta { display: inline-block; background-color: #1e293b; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 14px; font-weight: 700; letter-spacing: 0.02em; box-shadow: 0 4px 10px rgba(30, 41, 59, 0.22); }
-        .btn-cta:hover { background-color: #334155; }
         .bank-box { background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px; font-size: 12px; color: #475569; }
         .bank-title { font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; font-size: 11px; }
         .footer { background: #f8fafc; border-top: 1px solid #f1f5f9; padding: 16px 24px; text-align: center; font-size: 11px; color: #94a3b8; }
@@ -293,11 +289,6 @@ const generateInvoiceEmailHtml = ({ invoice, company, customMessage, downloadUrl
                     </table>
                 </div>
 
-                ${finalDownloadUrl ? `
-                <div class="cta-container" style="text-align: center; margin: 26px 0;">
-                    <a href="${finalDownloadUrl}" class="btn-cta" target="_blank" style="display: inline-block; background-color: #1e293b; color: #ffffff !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 14px; font-weight: 700; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(30, 41, 59, 0.22);">Download Invoice</a>
-                </div>` : ''}
-
                 ${hasBankDetails ? `
                 <div class="bank-box">
                     <div class="bank-title">Payment &amp; Bank Transfer Details</div>
@@ -327,7 +318,7 @@ const generateInvoiceEmailHtml = ({ invoice, company, customMessage, downloadUrl
 };
 
 /**
- * Send an Official Invoice Email with PDF Attachment & Download Button
+ * Send an Official Invoice Email with PDF Attachment
  * @param {Object} params
  * @param {Object} params.invoice
  * @param {Object} params.company
@@ -389,14 +380,11 @@ const sendInvoiceEmail = async ({
 
         const invoiceNumber = invoice?.invoiceNumber || `INV-${invoice?.id}`;
         const mailSubject = subject || `Invoice #${invoiceNumber} from ${companyName}`;
-        const finalDownloadUrl = downloadUrl || publicUrl;
 
         const htmlContent = generateInvoiceEmailHtml({
             invoice,
             company,
-            customMessage,
-            downloadUrl: finalDownloadUrl,
-            publicUrl: finalDownloadUrl
+            customMessage
         });
 
         const mailOptions = {
@@ -404,7 +392,7 @@ const sendInvoiceEmail = async ({
             to: recipientEmail,
             subject: mailSubject,
             html: htmlContent,
-            text: `Invoice #${invoiceNumber} from ${companyName}\nTotal Amount: ${invoice?.currency || 'EUR'} ${invoice?.totalAmount}\nDue Date: ${invoice?.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'Upon receipt'}\n\nDownload invoice:\n${finalDownloadUrl || ''}`
+            text: `Invoice #${invoiceNumber} from ${companyName}\nTotal Amount: ${invoice?.currency || 'EUR'} ${invoice?.totalAmount}\nDue Date: ${invoice?.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'Upon receipt'}\n\nPlease find the attached invoice PDF.`
         };
 
         if (bccEmail) {
