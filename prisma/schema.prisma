@@ -195,6 +195,7 @@ model company {
   advanceadjustment     advanceadjustment[]
   company_user          company_user[]
   company_smtp_settings company_smtp_settings?
+  subscription          subscription[]
 
   @@index([planId], map: "Company_planId_fkey")
   @@index([email], map: "Company_email_idx")
@@ -695,6 +696,7 @@ model plan {
   updatedAt              DateTime      @default(now()) @updatedAt
   company                company[]
   planrequest            planrequest[]
+  subscription           subscription[]
 }
 
 model planrequest {
@@ -2092,5 +2094,25 @@ model integration_log {
   @@index([companyId, provider], map: "idx_company_provider")
   @@index([createdAt], map: "idx_created")
 }
+
+model subscription {
+  id               Int       @id @default(autoincrement())
+  companyId        Int
+  planId           Int?
+  startDate        DateTime  @default(now())
+  expiryDate       DateTime
+  billingCycle     String    @default("Monthly")
+  amount           Float     @default(0)
+  status           String    @default("ACTIVE")
+  paymentReference String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
+  company          company   @relation(fields: [companyId], references: [id], onDelete: Cascade, map: "Subscription_companyId_fkey")
+  plan             plan?     @relation(fields: [planId], references: [id], onDelete: SetNull, map: "Subscription_planId_fkey")
+
+  @@index([companyId], map: "Subscription_companyId_idx")
+  @@index([planId], map: "Subscription_planId_idx")
+}
+
 
 

@@ -43,11 +43,25 @@ const authenticateToken = async (req, res, next) => {
                 expiryCache.set(user.companyId, { timestamp: now, isExpired });
             }
 
+            req.isSubscriptionExpired = isExpired;
+
+            // If subscription is expired:
+            // Allow all GET requests (read-only access to existing records, reports, profile, dashboards)
+            // Allow subscription management endpoints (/api/company/subscription, /api/plans, /api/auth)
+            // Block mutating operations (POST, PUT, PATCH, DELETE) on business modules
             if (isExpired) {
-                return res.status(403).json({ 
-                    message: 'Your company plan has expired. Please contact super admin to renew your plan.',
-                    isExpired: true 
-                });
+                const rawUrl = (req.originalUrl || req.url || '').toLowerCase();
+                const isSubscriptionOrAuthRoute = rawUrl.includes('/subscription') || 
+                                                 rawUrl.includes('/plan') || 
+                                                 rawUrl.includes('/auth') || 
+                                                 rawUrl.includes('/switch-company');
+
+                if (!isSubscriptionOrAuthRoute && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+                    return res.status(403).json({ 
+                        message: 'Your subscription has expired. Please renew your plan to perform this action.',
+                        isExpired: true 
+                    });
+                }
             }
         }
 
@@ -165,4 +179,12 @@ const authorizePermissions = (requiredPermission) => {
     };
 };
 
-module.exports = { authenticateToken, authorizeRoles, authorizePermissions };
+const clearCompanyExpiryCache = (companyId) => {
+    if (companyId) {
+        expiryCache.delete(parseInt(companyId));
+    } else {
+        expiryCache.clear();
+    }
+};
+
+module.exports = { authenticateToken, authorizeRoles, authorizePermissions, clearCompanyExpiryCache };

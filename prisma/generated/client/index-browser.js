@@ -1392,6 +1392,20 @@ exports.Prisma.Integration_logScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.SubscriptionScalarFieldEnum = {
+  id: 'id',
+  companyId: 'companyId',
+  planId: 'planId',
+  startDate: 'startDate',
+  expiryDate: 'expiryDate',
+  billingCycle: 'billingCycle',
+  amount: 'amount',
+  status: 'status',
+  paymentReference: 'paymentReference',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -1654,7 +1668,8 @@ exports.Prisma.ModelName = {
   deliveryperson: 'deliveryperson',
   advanceadjustment: 'advanceadjustment',
   company_integration: 'company_integration',
-  integration_log: 'integration_log'
+  integration_log: 'integration_log',
+  subscription: 'subscription'
 };
 
 /**

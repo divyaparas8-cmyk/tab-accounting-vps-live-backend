@@ -257,6 +257,20 @@ const approvePlanRequest = async (req, res) => {
                         status: 'Success'
                     }
                 });
+
+                // Record subscription
+                await prisma.subscription.create({
+                    data: {
+                        companyId: existingCompany.id,
+                        planId: planRequest.planId,
+                        startDate: start,
+                        expiryDate: end,
+                        billingCycle: planRequest.billingCycle || 'Monthly',
+                        amount: planAmount,
+                        status: 'ACTIVE',
+                        paymentReference: `REQ-${planRequest.id}`
+                    }
+                });
             }
 
             const updatedRequest = await prisma.planrequest.update({
@@ -340,6 +354,20 @@ const approvePlanRequest = async (req, res) => {
                     paymentMethod: 'Subscription Request',
                     amount: planAmount,
                     status: 'Success'
+                }
+            });
+
+            // Record subscription
+            await tx.subscription.create({
+                data: {
+                    companyId: company.id,
+                    planId: planRequest.planId,
+                    startDate: start,
+                    expiryDate: end,
+                    billingCycle: planRequest.billingCycle || 'Monthly',
+                    amount: planAmount,
+                    status: 'ACTIVE',
+                    paymentReference: `REQ-${planRequest.id}`
                 }
             });
 

@@ -14,6 +14,7 @@ const express = require('express');
 const cors = require('cors');
 const authRoutes = require('./src/routes/authRoutes');
 const companyRoutes = require('./src/routes/companyRoutes');
+const subscriptionRoutes = require('./src/routes/subscriptionRoutes');
 const planRoutes = require('./src/routes/planRoutes');
 const planRequestRoutes = require('./src/routes/planRequestRoutes');
 const paymentRoutes = require('./src/routes/paymentRoutes');
@@ -94,6 +95,26 @@ prisma.$connect()
         } catch (e) {
             console.warn('⚠️ Could not write to db_conn.log:', e.message);
         }
+
+        // Auto-ensure subscription table exists (safe for local & live VPS)
+        prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS \`subscription\` (
+                \`id\` INT NOT NULL AUTO_INCREMENT,
+                \`companyId\` INT NOT NULL,
+                \`planId\` INT NULL,
+                \`startDate\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                \`expiryDate\` DATETIME(3) NOT NULL,
+                \`billingCycle\` VARCHAR(191) NOT NULL DEFAULT 'Monthly',
+                \`amount\` DOUBLE NOT NULL DEFAULT 0,
+                \`status\` VARCHAR(191) NOT NULL DEFAULT 'ACTIVE',
+                \`paymentReference\` VARCHAR(191) NULL,
+                \`createdAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+                \`updatedAt\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+                PRIMARY KEY (\`id\`),
+                INDEX \`Subscription_companyId_idx\` (\`companyId\`),
+                INDEX \`Subscription_planId_idx\` (\`planId\`)
+            ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+        `).catch(e => console.warn('⚠️ Subscription table auto-init notice:', e.message));
     })
     .catch((err) => {
         console.error('❌ Database connection failed!');
@@ -164,6 +185,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/company', companyRoutes);
+app.use('/api/company/subscription', subscriptionRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/plan-requests', planRequestRoutes);
 app.use('/api/superadmin/payments', paymentRecordRoutes);

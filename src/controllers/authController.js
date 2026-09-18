@@ -136,16 +136,16 @@ const login = async (req, res) => {
         let activeRoleId = activeLink ? activeLink.roleId : user.roleId;
 
         // Check for company plan expiration
+        let isExpired = false;
+        let subscriptionStatus = 'ACTIVE';
         if (activeRole !== 'SUPERADMIN' && activeCompany && activeCompany.endDate) {
             const expiryDate = new Date(activeCompany.endDate);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
             if (expiryDate < today) {
-                return res.status(403).json({ 
-                    message: 'Your company plan has expired. Please contact super admin to renew your plan.',
-                    isExpired: true 
-                });
+                isExpired = true;
+                subscriptionStatus = 'EXPIRED';
             }
         }
 
@@ -244,7 +244,9 @@ const login = async (req, res) => {
                 company: activeCompany,
                 companies: userCompanies,
                 permissions: permissions,
-                planModules: planModules
+                planModules: planModules,
+                isExpired: isExpired,
+                subscriptionStatus: subscriptionStatus
             },
         });
     } catch (error) {
@@ -332,15 +334,15 @@ const switchCompany = async (req, res) => {
         }
 
         // Check for company plan expiration
+        let isExpired = false;
+        let subscriptionStatus = 'ACTIVE';
         if (user.role !== 'SUPERADMIN' && targetCompany.endDate) {
             const expiryDate = new Date(targetCompany.endDate);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             if (expiryDate < today) {
-                return res.status(403).json({ 
-                    message: 'Cannot switch: This company plan has expired.',
-                    isExpired: true 
-                });
+                isExpired = true;
+                subscriptionStatus = 'EXPIRED';
             }
         }
 
@@ -449,7 +451,9 @@ const switchCompany = async (req, res) => {
                 company: targetCompany,
                 companies: userCompanies,
                 permissions: permissions,
-                planModules: planModules
+                planModules: planModules,
+                isExpired: isExpired,
+                subscriptionStatus: subscriptionStatus
             },
         });
     } catch (error) {
@@ -486,16 +490,16 @@ const impersonate = async (req, res) => {
         }
 
         // Check for company plan expiration during impersonation
+        let isExpired = false;
+        let subscriptionStatus = 'ACTIVE';
         if (user.company && user.company.endDate) {
             const expiryDate = new Date(user.company.endDate);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
             if (expiryDate < today) {
-                return res.status(403).json({ 
-                    message: 'Cannot login: This company plan has expired.',
-                    isExpired: true 
-                });
+                isExpired = true;
+                subscriptionStatus = 'EXPIRED';
             }
         }
 
@@ -547,7 +551,9 @@ const impersonate = async (req, res) => {
                 companyId: user.companyId,
                 company: user.company,
                 permissions: permissions,
-                planModules: planModules
+                planModules: planModules,
+                isExpired: isExpired,
+                subscriptionStatus: subscriptionStatus
             },
         });
     } catch (error) {

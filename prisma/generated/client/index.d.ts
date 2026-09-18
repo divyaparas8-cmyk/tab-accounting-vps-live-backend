@@ -363,6 +363,11 @@ export type company_integration = $Result.DefaultSelection<Prisma.$company_integ
  * 
  */
 export type integration_log = $Result.DefaultSelection<Prisma.$integration_logPayload>
+/**
+ * Model subscription
+ * 
+ */
+export type subscription = $Result.DefaultSelection<Prisma.$subscriptionPayload>
 
 /**
  * Enums
@@ -1528,6 +1533,16 @@ export class PrismaClient<
     * ```
     */
   get integration_log(): Prisma.integration_logDelegate<ExtArgs>;
+
+  /**
+   * `prisma.subscription`: Exposes CRUD operations for the **subscription** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Subscriptions
+    * const subscriptions = await prisma.subscription.findMany()
+    * ```
+    */
+  get subscription(): Prisma.subscriptionDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -2038,7 +2053,8 @@ export namespace Prisma {
     deliveryperson: 'deliveryperson',
     advanceadjustment: 'advanceadjustment',
     company_integration: 'company_integration',
-    integration_log: 'integration_log'
+    integration_log: 'integration_log',
+    subscription: 'subscription'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -2054,7 +2070,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "accountgroup" | "accountsubgroup" | "bankaccount" | "banktransaction" | "category" | "company" | "customer" | "dashboardannouncement" | "deliverychallan" | "deliverychallanitem" | "expenseentry" | "goodsreceiptnote" | "goodsreceiptnoteitem" | "incomeentry" | "inventoryadjustment" | "inventoryadjustmentitem" | "inventorytransaction" | "invoice" | "invoiceitem" | "journalentry" | "ledger" | "passwordrequest" | "payment" | "paymentrecord" | "plan" | "planrequest" | "posinvoice" | "posinvoiceitem" | "product" | "purchasebill" | "purchasebillitem" | "purchaseorder" | "purchaseorderitem" | "purchasequotation" | "purchasequotationitem" | "purchasereturn" | "purchasereturnitem" | "receipt" | "salesorder" | "salesorderitem" | "salesquotation" | "salesquotationitem" | "salesreturn" | "salesreturnitem" | "service" | "stock" | "stocktransfer" | "stocktransferitem" | "transaction" | "uom" | "user" | "company_user" | "company_smtp_settings" | "vendor" | "warehouse" | "voucher" | "voucheritem" | "role" | "shippingaddress" | "inventory_batch" | "inventory_consumption" | "receiptinvoiceallocation" | "paymentbillallocation" | "transaction_numbering" | "auditlog" | "salesperson" | "deliveryperson" | "advanceadjustment" | "company_integration" | "integration_log"
+      modelProps: "accountgroup" | "accountsubgroup" | "bankaccount" | "banktransaction" | "category" | "company" | "customer" | "dashboardannouncement" | "deliverychallan" | "deliverychallanitem" | "expenseentry" | "goodsreceiptnote" | "goodsreceiptnoteitem" | "incomeentry" | "inventoryadjustment" | "inventoryadjustmentitem" | "inventorytransaction" | "invoice" | "invoiceitem" | "journalentry" | "ledger" | "passwordrequest" | "payment" | "paymentrecord" | "plan" | "planrequest" | "posinvoice" | "posinvoiceitem" | "product" | "purchasebill" | "purchasebillitem" | "purchaseorder" | "purchaseorderitem" | "purchasequotation" | "purchasequotationitem" | "purchasereturn" | "purchasereturnitem" | "receipt" | "salesorder" | "salesorderitem" | "salesquotation" | "salesquotationitem" | "salesreturn" | "salesreturnitem" | "service" | "stock" | "stocktransfer" | "stocktransferitem" | "transaction" | "uom" | "user" | "company_user" | "company_smtp_settings" | "vendor" | "warehouse" | "voucher" | "voucheritem" | "role" | "shippingaddress" | "inventory_batch" | "inventory_consumption" | "receiptinvoiceallocation" | "paymentbillallocation" | "transaction_numbering" | "auditlog" | "salesperson" | "deliveryperson" | "advanceadjustment" | "company_integration" | "integration_log" | "subscription"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -6678,6 +6694,72 @@ export namespace Prisma {
           }
         }
       }
+      subscription: {
+        payload: Prisma.$subscriptionPayload<ExtArgs>
+        fields: Prisma.subscriptionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.subscriptionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$subscriptionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.subscriptionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$subscriptionPayload>
+          }
+          findFirst: {
+            args: Prisma.subscriptionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$subscriptionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.subscriptionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$subscriptionPayload>
+          }
+          findMany: {
+            args: Prisma.subscriptionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$subscriptionPayload>[]
+          }
+          create: {
+            args: Prisma.subscriptionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$subscriptionPayload>
+          }
+          createMany: {
+            args: Prisma.subscriptionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.subscriptionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$subscriptionPayload>
+          }
+          update: {
+            args: Prisma.subscriptionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$subscriptionPayload>
+          }
+          deleteMany: {
+            args: Prisma.subscriptionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.subscriptionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.subscriptionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$subscriptionPayload>
+          }
+          aggregate: {
+            args: Prisma.SubscriptionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateSubscription>
+          }
+          groupBy: {
+            args: Prisma.subscriptionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<SubscriptionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.subscriptionCountArgs<ExtArgs>
+            result: $Utils.Optional<SubscriptionCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -7014,6 +7096,7 @@ export namespace Prisma {
     deliveryperson: number
     advanceadjustment: number
     company_user: number
+    subscription: number
   }
 
   export type CompanyCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -7059,6 +7142,7 @@ export namespace Prisma {
     deliveryperson?: boolean | CompanyCountOutputTypeCountDeliverypersonArgs
     advanceadjustment?: boolean | CompanyCountOutputTypeCountAdvanceadjustmentArgs
     company_user?: boolean | CompanyCountOutputTypeCountCompany_userArgs
+    subscription?: boolean | CompanyCountOutputTypeCountSubscriptionArgs
   }
 
   // Custom InputTypes
@@ -7364,6 +7448,13 @@ export namespace Prisma {
    */
   export type CompanyCountOutputTypeCountCompany_userArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: company_userWhereInput
+  }
+
+  /**
+   * CompanyCountOutputType without action
+   */
+  export type CompanyCountOutputTypeCountSubscriptionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: subscriptionWhereInput
   }
 
 
@@ -7874,11 +7965,13 @@ export namespace Prisma {
   export type PlanCountOutputType = {
     company: number
     planrequest: number
+    subscription: number
   }
 
   export type PlanCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     company?: boolean | PlanCountOutputTypeCountCompanyArgs
     planrequest?: boolean | PlanCountOutputTypeCountPlanrequestArgs
+    subscription?: boolean | PlanCountOutputTypeCountSubscriptionArgs
   }
 
   // Custom InputTypes
@@ -7904,6 +7997,13 @@ export namespace Prisma {
    */
   export type PlanCountOutputTypeCountPlanrequestArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: planrequestWhereInput
+  }
+
+  /**
+   * PlanCountOutputType without action
+   */
+  export type PlanCountOutputTypeCountSubscriptionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: subscriptionWhereInput
   }
 
 
@@ -14714,6 +14814,7 @@ export namespace Prisma {
     advanceadjustment?: boolean | company$advanceadjustmentArgs<ExtArgs>
     company_user?: boolean | company$company_userArgs<ExtArgs>
     company_smtp_settings?: boolean | company$company_smtp_settingsArgs<ExtArgs>
+    subscription?: boolean | company$subscriptionArgs<ExtArgs>
     _count?: boolean | CompanyCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["company"]>
 
@@ -14825,6 +14926,7 @@ export namespace Prisma {
     advanceadjustment?: boolean | company$advanceadjustmentArgs<ExtArgs>
     company_user?: boolean | company$company_userArgs<ExtArgs>
     company_smtp_settings?: boolean | company$company_smtp_settingsArgs<ExtArgs>
+    subscription?: boolean | company$subscriptionArgs<ExtArgs>
     _count?: boolean | CompanyCountOutputTypeDefaultArgs<ExtArgs>
   }
 
@@ -14875,6 +14977,7 @@ export namespace Prisma {
       advanceadjustment: Prisma.$advanceadjustmentPayload<ExtArgs>[]
       company_user: Prisma.$company_userPayload<ExtArgs>[]
       company_smtp_settings: Prisma.$company_smtp_settingsPayload<ExtArgs> | null
+      subscription: Prisma.$subscriptionPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: number
@@ -15320,6 +15423,7 @@ export namespace Prisma {
     advanceadjustment<T extends company$advanceadjustmentArgs<ExtArgs> = {}>(args?: Subset<T, company$advanceadjustmentArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$advanceadjustmentPayload<ExtArgs>, T, "findMany"> | Null>
     company_user<T extends company$company_userArgs<ExtArgs> = {}>(args?: Subset<T, company$company_userArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$company_userPayload<ExtArgs>, T, "findMany"> | Null>
     company_smtp_settings<T extends company$company_smtp_settingsArgs<ExtArgs> = {}>(args?: Subset<T, company$company_smtp_settingsArgs<ExtArgs>>): Prisma__company_smtp_settingsClient<$Result.GetResult<Prisma.$company_smtp_settingsPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
+    subscription<T extends company$subscriptionArgs<ExtArgs> = {}>(args?: Subset<T, company$subscriptionArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -16574,6 +16678,26 @@ export namespace Prisma {
      */
     include?: company_smtp_settingsInclude<ExtArgs> | null
     where?: company_smtp_settingsWhereInput
+  }
+
+  /**
+   * company.subscription
+   */
+  export type company$subscriptionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    where?: subscriptionWhereInput
+    orderBy?: subscriptionOrderByWithRelationInput | subscriptionOrderByWithRelationInput[]
+    cursor?: subscriptionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: SubscriptionScalarFieldEnum | SubscriptionScalarFieldEnum[]
   }
 
   /**
@@ -36916,6 +37040,7 @@ export namespace Prisma {
     updatedAt?: boolean
     company?: boolean | plan$companyArgs<ExtArgs>
     planrequest?: boolean | plan$planrequestArgs<ExtArgs>
+    subscription?: boolean | plan$subscriptionArgs<ExtArgs>
     _count?: boolean | PlanCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["plan"]>
 
@@ -36941,6 +37066,7 @@ export namespace Prisma {
   export type planInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     company?: boolean | plan$companyArgs<ExtArgs>
     planrequest?: boolean | plan$planrequestArgs<ExtArgs>
+    subscription?: boolean | plan$subscriptionArgs<ExtArgs>
     _count?: boolean | PlanCountOutputTypeDefaultArgs<ExtArgs>
   }
 
@@ -36949,6 +37075,7 @@ export namespace Prisma {
     objects: {
       company: Prisma.$companyPayload<ExtArgs>[]
       planrequest: Prisma.$planrequestPayload<ExtArgs>[]
+      subscription: Prisma.$subscriptionPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: number
@@ -37308,6 +37435,7 @@ export namespace Prisma {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     company<T extends plan$companyArgs<ExtArgs> = {}>(args?: Subset<T, plan$companyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$companyPayload<ExtArgs>, T, "findMany"> | Null>
     planrequest<T extends plan$planrequestArgs<ExtArgs> = {}>(args?: Subset<T, plan$planrequestArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$planrequestPayload<ExtArgs>, T, "findMany"> | Null>
+    subscription<T extends plan$subscriptionArgs<ExtArgs> = {}>(args?: Subset<T, plan$subscriptionArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -37688,6 +37816,26 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: PlanrequestScalarFieldEnum | PlanrequestScalarFieldEnum[]
+  }
+
+  /**
+   * plan.subscription
+   */
+  export type plan$subscriptionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    where?: subscriptionWhereInput
+    orderBy?: subscriptionOrderByWithRelationInput | subscriptionOrderByWithRelationInput[]
+    cursor?: subscriptionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: SubscriptionScalarFieldEnum | SubscriptionScalarFieldEnum[]
   }
 
   /**
@@ -88190,6 +88338,1016 @@ export namespace Prisma {
 
 
   /**
+   * Model subscription
+   */
+
+  export type AggregateSubscription = {
+    _count: SubscriptionCountAggregateOutputType | null
+    _avg: SubscriptionAvgAggregateOutputType | null
+    _sum: SubscriptionSumAggregateOutputType | null
+    _min: SubscriptionMinAggregateOutputType | null
+    _max: SubscriptionMaxAggregateOutputType | null
+  }
+
+  export type SubscriptionAvgAggregateOutputType = {
+    id: number | null
+    companyId: number | null
+    planId: number | null
+    amount: number | null
+  }
+
+  export type SubscriptionSumAggregateOutputType = {
+    id: number | null
+    companyId: number | null
+    planId: number | null
+    amount: number | null
+  }
+
+  export type SubscriptionMinAggregateOutputType = {
+    id: number | null
+    companyId: number | null
+    planId: number | null
+    startDate: Date | null
+    expiryDate: Date | null
+    billingCycle: string | null
+    amount: number | null
+    status: string | null
+    paymentReference: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type SubscriptionMaxAggregateOutputType = {
+    id: number | null
+    companyId: number | null
+    planId: number | null
+    startDate: Date | null
+    expiryDate: Date | null
+    billingCycle: string | null
+    amount: number | null
+    status: string | null
+    paymentReference: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type SubscriptionCountAggregateOutputType = {
+    id: number
+    companyId: number
+    planId: number
+    startDate: number
+    expiryDate: number
+    billingCycle: number
+    amount: number
+    status: number
+    paymentReference: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type SubscriptionAvgAggregateInputType = {
+    id?: true
+    companyId?: true
+    planId?: true
+    amount?: true
+  }
+
+  export type SubscriptionSumAggregateInputType = {
+    id?: true
+    companyId?: true
+    planId?: true
+    amount?: true
+  }
+
+  export type SubscriptionMinAggregateInputType = {
+    id?: true
+    companyId?: true
+    planId?: true
+    startDate?: true
+    expiryDate?: true
+    billingCycle?: true
+    amount?: true
+    status?: true
+    paymentReference?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type SubscriptionMaxAggregateInputType = {
+    id?: true
+    companyId?: true
+    planId?: true
+    startDate?: true
+    expiryDate?: true
+    billingCycle?: true
+    amount?: true
+    status?: true
+    paymentReference?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type SubscriptionCountAggregateInputType = {
+    id?: true
+    companyId?: true
+    planId?: true
+    startDate?: true
+    expiryDate?: true
+    billingCycle?: true
+    amount?: true
+    status?: true
+    paymentReference?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type SubscriptionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which subscription to aggregate.
+     */
+    where?: subscriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of subscriptions to fetch.
+     */
+    orderBy?: subscriptionOrderByWithRelationInput | subscriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: subscriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` subscriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` subscriptions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned subscriptions
+    **/
+    _count?: true | SubscriptionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: SubscriptionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: SubscriptionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: SubscriptionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: SubscriptionMaxAggregateInputType
+  }
+
+  export type GetSubscriptionAggregateType<T extends SubscriptionAggregateArgs> = {
+        [P in keyof T & keyof AggregateSubscription]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateSubscription[P]>
+      : GetScalarType<T[P], AggregateSubscription[P]>
+  }
+
+
+
+
+  export type subscriptionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: subscriptionWhereInput
+    orderBy?: subscriptionOrderByWithAggregationInput | subscriptionOrderByWithAggregationInput[]
+    by: SubscriptionScalarFieldEnum[] | SubscriptionScalarFieldEnum
+    having?: subscriptionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: SubscriptionCountAggregateInputType | true
+    _avg?: SubscriptionAvgAggregateInputType
+    _sum?: SubscriptionSumAggregateInputType
+    _min?: SubscriptionMinAggregateInputType
+    _max?: SubscriptionMaxAggregateInputType
+  }
+
+  export type SubscriptionGroupByOutputType = {
+    id: number
+    companyId: number
+    planId: number | null
+    startDate: Date
+    expiryDate: Date
+    billingCycle: string
+    amount: number
+    status: string
+    paymentReference: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: SubscriptionCountAggregateOutputType | null
+    _avg: SubscriptionAvgAggregateOutputType | null
+    _sum: SubscriptionSumAggregateOutputType | null
+    _min: SubscriptionMinAggregateOutputType | null
+    _max: SubscriptionMaxAggregateOutputType | null
+  }
+
+  type GetSubscriptionGroupByPayload<T extends subscriptionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<SubscriptionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof SubscriptionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], SubscriptionGroupByOutputType[P]>
+            : GetScalarType<T[P], SubscriptionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type subscriptionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    companyId?: boolean
+    planId?: boolean
+    startDate?: boolean
+    expiryDate?: boolean
+    billingCycle?: boolean
+    amount?: boolean
+    status?: boolean
+    paymentReference?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    company?: boolean | companyDefaultArgs<ExtArgs>
+    plan?: boolean | subscription$planArgs<ExtArgs>
+  }, ExtArgs["result"]["subscription"]>
+
+
+  export type subscriptionSelectScalar = {
+    id?: boolean
+    companyId?: boolean
+    planId?: boolean
+    startDate?: boolean
+    expiryDate?: boolean
+    billingCycle?: boolean
+    amount?: boolean
+    status?: boolean
+    paymentReference?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type subscriptionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    company?: boolean | companyDefaultArgs<ExtArgs>
+    plan?: boolean | subscription$planArgs<ExtArgs>
+  }
+
+  export type $subscriptionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "subscription"
+    objects: {
+      company: Prisma.$companyPayload<ExtArgs>
+      plan: Prisma.$planPayload<ExtArgs> | null
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: number
+      companyId: number
+      planId: number | null
+      startDate: Date
+      expiryDate: Date
+      billingCycle: string
+      amount: number
+      status: string
+      paymentReference: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["subscription"]>
+    composites: {}
+  }
+
+  type subscriptionGetPayload<S extends boolean | null | undefined | subscriptionDefaultArgs> = $Result.GetResult<Prisma.$subscriptionPayload, S>
+
+  type subscriptionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<subscriptionFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: SubscriptionCountAggregateInputType | true
+    }
+
+  export interface subscriptionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['subscription'], meta: { name: 'subscription' } }
+    /**
+     * Find zero or one Subscription that matches the filter.
+     * @param {subscriptionFindUniqueArgs} args - Arguments to find a Subscription
+     * @example
+     * // Get one Subscription
+     * const subscription = await prisma.subscription.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends subscriptionFindUniqueArgs>(args: SelectSubset<T, subscriptionFindUniqueArgs<ExtArgs>>): Prisma__subscriptionClient<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one Subscription that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {subscriptionFindUniqueOrThrowArgs} args - Arguments to find a Subscription
+     * @example
+     * // Get one Subscription
+     * const subscription = await prisma.subscription.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends subscriptionFindUniqueOrThrowArgs>(args: SelectSubset<T, subscriptionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__subscriptionClient<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first Subscription that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {subscriptionFindFirstArgs} args - Arguments to find a Subscription
+     * @example
+     * // Get one Subscription
+     * const subscription = await prisma.subscription.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends subscriptionFindFirstArgs>(args?: SelectSubset<T, subscriptionFindFirstArgs<ExtArgs>>): Prisma__subscriptionClient<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first Subscription that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {subscriptionFindFirstOrThrowArgs} args - Arguments to find a Subscription
+     * @example
+     * // Get one Subscription
+     * const subscription = await prisma.subscription.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends subscriptionFindFirstOrThrowArgs>(args?: SelectSubset<T, subscriptionFindFirstOrThrowArgs<ExtArgs>>): Prisma__subscriptionClient<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more Subscriptions that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {subscriptionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Subscriptions
+     * const subscriptions = await prisma.subscription.findMany()
+     * 
+     * // Get first 10 Subscriptions
+     * const subscriptions = await prisma.subscription.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const subscriptionWithIdOnly = await prisma.subscription.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends subscriptionFindManyArgs>(args?: SelectSubset<T, subscriptionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a Subscription.
+     * @param {subscriptionCreateArgs} args - Arguments to create a Subscription.
+     * @example
+     * // Create one Subscription
+     * const Subscription = await prisma.subscription.create({
+     *   data: {
+     *     // ... data to create a Subscription
+     *   }
+     * })
+     * 
+     */
+    create<T extends subscriptionCreateArgs>(args: SelectSubset<T, subscriptionCreateArgs<ExtArgs>>): Prisma__subscriptionClient<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many Subscriptions.
+     * @param {subscriptionCreateManyArgs} args - Arguments to create many Subscriptions.
+     * @example
+     * // Create many Subscriptions
+     * const subscription = await prisma.subscription.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends subscriptionCreateManyArgs>(args?: SelectSubset<T, subscriptionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a Subscription.
+     * @param {subscriptionDeleteArgs} args - Arguments to delete one Subscription.
+     * @example
+     * // Delete one Subscription
+     * const Subscription = await prisma.subscription.delete({
+     *   where: {
+     *     // ... filter to delete one Subscription
+     *   }
+     * })
+     * 
+     */
+    delete<T extends subscriptionDeleteArgs>(args: SelectSubset<T, subscriptionDeleteArgs<ExtArgs>>): Prisma__subscriptionClient<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one Subscription.
+     * @param {subscriptionUpdateArgs} args - Arguments to update one Subscription.
+     * @example
+     * // Update one Subscription
+     * const subscription = await prisma.subscription.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends subscriptionUpdateArgs>(args: SelectSubset<T, subscriptionUpdateArgs<ExtArgs>>): Prisma__subscriptionClient<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more Subscriptions.
+     * @param {subscriptionDeleteManyArgs} args - Arguments to filter Subscriptions to delete.
+     * @example
+     * // Delete a few Subscriptions
+     * const { count } = await prisma.subscription.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends subscriptionDeleteManyArgs>(args?: SelectSubset<T, subscriptionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Subscriptions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {subscriptionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Subscriptions
+     * const subscription = await prisma.subscription.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends subscriptionUpdateManyArgs>(args: SelectSubset<T, subscriptionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one Subscription.
+     * @param {subscriptionUpsertArgs} args - Arguments to update or create a Subscription.
+     * @example
+     * // Update or create a Subscription
+     * const subscription = await prisma.subscription.upsert({
+     *   create: {
+     *     // ... data to create a Subscription
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Subscription we want to update
+     *   }
+     * })
+     */
+    upsert<T extends subscriptionUpsertArgs>(args: SelectSubset<T, subscriptionUpsertArgs<ExtArgs>>): Prisma__subscriptionClient<$Result.GetResult<Prisma.$subscriptionPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of Subscriptions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {subscriptionCountArgs} args - Arguments to filter Subscriptions to count.
+     * @example
+     * // Count the number of Subscriptions
+     * const count = await prisma.subscription.count({
+     *   where: {
+     *     // ... the filter for the Subscriptions we want to count
+     *   }
+     * })
+    **/
+    count<T extends subscriptionCountArgs>(
+      args?: Subset<T, subscriptionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], SubscriptionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Subscription.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {SubscriptionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends SubscriptionAggregateArgs>(args: Subset<T, SubscriptionAggregateArgs>): Prisma.PrismaPromise<GetSubscriptionAggregateType<T>>
+
+    /**
+     * Group by Subscription.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {subscriptionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends subscriptionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: subscriptionGroupByArgs['orderBy'] }
+        : { orderBy?: subscriptionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, subscriptionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetSubscriptionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the subscription model
+   */
+  readonly fields: subscriptionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for subscription.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__subscriptionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    company<T extends companyDefaultArgs<ExtArgs> = {}>(args?: Subset<T, companyDefaultArgs<ExtArgs>>): Prisma__companyClient<$Result.GetResult<Prisma.$companyPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    plan<T extends subscription$planArgs<ExtArgs> = {}>(args?: Subset<T, subscription$planArgs<ExtArgs>>): Prisma__planClient<$Result.GetResult<Prisma.$planPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the subscription model
+   */ 
+  interface subscriptionFieldRefs {
+    readonly id: FieldRef<"subscription", 'Int'>
+    readonly companyId: FieldRef<"subscription", 'Int'>
+    readonly planId: FieldRef<"subscription", 'Int'>
+    readonly startDate: FieldRef<"subscription", 'DateTime'>
+    readonly expiryDate: FieldRef<"subscription", 'DateTime'>
+    readonly billingCycle: FieldRef<"subscription", 'String'>
+    readonly amount: FieldRef<"subscription", 'Float'>
+    readonly status: FieldRef<"subscription", 'String'>
+    readonly paymentReference: FieldRef<"subscription", 'String'>
+    readonly createdAt: FieldRef<"subscription", 'DateTime'>
+    readonly updatedAt: FieldRef<"subscription", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * subscription findUnique
+   */
+  export type subscriptionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which subscription to fetch.
+     */
+    where: subscriptionWhereUniqueInput
+  }
+
+  /**
+   * subscription findUniqueOrThrow
+   */
+  export type subscriptionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which subscription to fetch.
+     */
+    where: subscriptionWhereUniqueInput
+  }
+
+  /**
+   * subscription findFirst
+   */
+  export type subscriptionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which subscription to fetch.
+     */
+    where?: subscriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of subscriptions to fetch.
+     */
+    orderBy?: subscriptionOrderByWithRelationInput | subscriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for subscriptions.
+     */
+    cursor?: subscriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` subscriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` subscriptions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of subscriptions.
+     */
+    distinct?: SubscriptionScalarFieldEnum | SubscriptionScalarFieldEnum[]
+  }
+
+  /**
+   * subscription findFirstOrThrow
+   */
+  export type subscriptionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which subscription to fetch.
+     */
+    where?: subscriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of subscriptions to fetch.
+     */
+    orderBy?: subscriptionOrderByWithRelationInput | subscriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for subscriptions.
+     */
+    cursor?: subscriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` subscriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` subscriptions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of subscriptions.
+     */
+    distinct?: SubscriptionScalarFieldEnum | SubscriptionScalarFieldEnum[]
+  }
+
+  /**
+   * subscription findMany
+   */
+  export type subscriptionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    /**
+     * Filter, which subscriptions to fetch.
+     */
+    where?: subscriptionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of subscriptions to fetch.
+     */
+    orderBy?: subscriptionOrderByWithRelationInput | subscriptionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing subscriptions.
+     */
+    cursor?: subscriptionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` subscriptions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` subscriptions.
+     */
+    skip?: number
+    distinct?: SubscriptionScalarFieldEnum | SubscriptionScalarFieldEnum[]
+  }
+
+  /**
+   * subscription create
+   */
+  export type subscriptionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    /**
+     * The data needed to create a subscription.
+     */
+    data: XOR<subscriptionCreateInput, subscriptionUncheckedCreateInput>
+  }
+
+  /**
+   * subscription createMany
+   */
+  export type subscriptionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many subscriptions.
+     */
+    data: subscriptionCreateManyInput | subscriptionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * subscription update
+   */
+  export type subscriptionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    /**
+     * The data needed to update a subscription.
+     */
+    data: XOR<subscriptionUpdateInput, subscriptionUncheckedUpdateInput>
+    /**
+     * Choose, which subscription to update.
+     */
+    where: subscriptionWhereUniqueInput
+  }
+
+  /**
+   * subscription updateMany
+   */
+  export type subscriptionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update subscriptions.
+     */
+    data: XOR<subscriptionUpdateManyMutationInput, subscriptionUncheckedUpdateManyInput>
+    /**
+     * Filter which subscriptions to update
+     */
+    where?: subscriptionWhereInput
+  }
+
+  /**
+   * subscription upsert
+   */
+  export type subscriptionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    /**
+     * The filter to search for the subscription to update in case it exists.
+     */
+    where: subscriptionWhereUniqueInput
+    /**
+     * In case the subscription found by the `where` argument doesn't exist, create a new subscription with this data.
+     */
+    create: XOR<subscriptionCreateInput, subscriptionUncheckedCreateInput>
+    /**
+     * In case the subscription was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<subscriptionUpdateInput, subscriptionUncheckedUpdateInput>
+  }
+
+  /**
+   * subscription delete
+   */
+  export type subscriptionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+    /**
+     * Filter which subscription to delete.
+     */
+    where: subscriptionWhereUniqueInput
+  }
+
+  /**
+   * subscription deleteMany
+   */
+  export type subscriptionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which subscriptions to delete
+     */
+    where?: subscriptionWhereInput
+  }
+
+  /**
+   * subscription.plan
+   */
+  export type subscription$planArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the plan
+     */
+    select?: planSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: planInclude<ExtArgs> | null
+    where?: planWhereInput
+  }
+
+  /**
+   * subscription without action
+   */
+  export type subscriptionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the subscription
+     */
+    select?: subscriptionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: subscriptionInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -89683,6 +90841,23 @@ export namespace Prisma {
   export type Integration_logScalarFieldEnum = (typeof Integration_logScalarFieldEnum)[keyof typeof Integration_logScalarFieldEnum]
 
 
+  export const SubscriptionScalarFieldEnum: {
+    id: 'id',
+    companyId: 'companyId',
+    planId: 'planId',
+    startDate: 'startDate',
+    expiryDate: 'expiryDate',
+    billingCycle: 'billingCycle',
+    amount: 'amount',
+    status: 'status',
+    paymentReference: 'paymentReference',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type SubscriptionScalarFieldEnum = (typeof SubscriptionScalarFieldEnum)[keyof typeof SubscriptionScalarFieldEnum]
+
+
   export const SortOrder: {
     asc: 'asc',
     desc: 'desc'
@@ -90378,6 +91553,7 @@ export namespace Prisma {
     advanceadjustment?: AdvanceadjustmentListRelationFilter
     company_user?: Company_userListRelationFilter
     company_smtp_settings?: XOR<Company_smtp_settingsNullableRelationFilter, company_smtp_settingsWhereInput> | null
+    subscription?: SubscriptionListRelationFilter
   }
 
   export type companyOrderByWithRelationInput = {
@@ -90484,6 +91660,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentOrderByRelationAggregateInput
     company_user?: company_userOrderByRelationAggregateInput
     company_smtp_settings?: company_smtp_settingsOrderByWithRelationInput
+    subscription?: subscriptionOrderByRelationAggregateInput
   }
 
   export type companyWhereUniqueInput = Prisma.AtLeast<{
@@ -90593,6 +91770,7 @@ export namespace Prisma {
     advanceadjustment?: AdvanceadjustmentListRelationFilter
     company_user?: Company_userListRelationFilter
     company_smtp_settings?: XOR<Company_smtp_settingsNullableRelationFilter, company_smtp_settingsWhereInput> | null
+    subscription?: SubscriptionListRelationFilter
   }, "id">
 
   export type companyOrderByWithAggregationInput = {
@@ -92898,6 +94076,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"plan"> | Date | string
     company?: CompanyListRelationFilter
     planrequest?: PlanrequestListRelationFilter
+    subscription?: SubscriptionListRelationFilter
   }
 
   export type planOrderByWithRelationInput = {
@@ -92918,6 +94097,7 @@ export namespace Prisma {
     updatedAt?: SortOrder
     company?: companyOrderByRelationAggregateInput
     planrequest?: planrequestOrderByRelationAggregateInput
+    subscription?: subscriptionOrderByRelationAggregateInput
   }
 
   export type planWhereUniqueInput = Prisma.AtLeast<{
@@ -92941,6 +94121,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"plan"> | Date | string
     company?: CompanyListRelationFilter
     planrequest?: PlanrequestListRelationFilter
+    subscription?: SubscriptionListRelationFilter
   }, "id">
 
   export type planOrderByWithAggregationInput = {
@@ -98343,6 +99524,96 @@ export namespace Prisma {
     createdAt?: DateTimeWithAggregatesFilter<"integration_log"> | Date | string
   }
 
+  export type subscriptionWhereInput = {
+    AND?: subscriptionWhereInput | subscriptionWhereInput[]
+    OR?: subscriptionWhereInput[]
+    NOT?: subscriptionWhereInput | subscriptionWhereInput[]
+    id?: IntFilter<"subscription"> | number
+    companyId?: IntFilter<"subscription"> | number
+    planId?: IntNullableFilter<"subscription"> | number | null
+    startDate?: DateTimeFilter<"subscription"> | Date | string
+    expiryDate?: DateTimeFilter<"subscription"> | Date | string
+    billingCycle?: StringFilter<"subscription"> | string
+    amount?: FloatFilter<"subscription"> | number
+    status?: StringFilter<"subscription"> | string
+    paymentReference?: StringNullableFilter<"subscription"> | string | null
+    createdAt?: DateTimeFilter<"subscription"> | Date | string
+    updatedAt?: DateTimeFilter<"subscription"> | Date | string
+    company?: XOR<CompanyRelationFilter, companyWhereInput>
+    plan?: XOR<PlanNullableRelationFilter, planWhereInput> | null
+  }
+
+  export type subscriptionOrderByWithRelationInput = {
+    id?: SortOrder
+    companyId?: SortOrder
+    planId?: SortOrderInput | SortOrder
+    startDate?: SortOrder
+    expiryDate?: SortOrder
+    billingCycle?: SortOrder
+    amount?: SortOrder
+    status?: SortOrder
+    paymentReference?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    company?: companyOrderByWithRelationInput
+    plan?: planOrderByWithRelationInput
+  }
+
+  export type subscriptionWhereUniqueInput = Prisma.AtLeast<{
+    id?: number
+    AND?: subscriptionWhereInput | subscriptionWhereInput[]
+    OR?: subscriptionWhereInput[]
+    NOT?: subscriptionWhereInput | subscriptionWhereInput[]
+    companyId?: IntFilter<"subscription"> | number
+    planId?: IntNullableFilter<"subscription"> | number | null
+    startDate?: DateTimeFilter<"subscription"> | Date | string
+    expiryDate?: DateTimeFilter<"subscription"> | Date | string
+    billingCycle?: StringFilter<"subscription"> | string
+    amount?: FloatFilter<"subscription"> | number
+    status?: StringFilter<"subscription"> | string
+    paymentReference?: StringNullableFilter<"subscription"> | string | null
+    createdAt?: DateTimeFilter<"subscription"> | Date | string
+    updatedAt?: DateTimeFilter<"subscription"> | Date | string
+    company?: XOR<CompanyRelationFilter, companyWhereInput>
+    plan?: XOR<PlanNullableRelationFilter, planWhereInput> | null
+  }, "id">
+
+  export type subscriptionOrderByWithAggregationInput = {
+    id?: SortOrder
+    companyId?: SortOrder
+    planId?: SortOrderInput | SortOrder
+    startDate?: SortOrder
+    expiryDate?: SortOrder
+    billingCycle?: SortOrder
+    amount?: SortOrder
+    status?: SortOrder
+    paymentReference?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: subscriptionCountOrderByAggregateInput
+    _avg?: subscriptionAvgOrderByAggregateInput
+    _max?: subscriptionMaxOrderByAggregateInput
+    _min?: subscriptionMinOrderByAggregateInput
+    _sum?: subscriptionSumOrderByAggregateInput
+  }
+
+  export type subscriptionScalarWhereWithAggregatesInput = {
+    AND?: subscriptionScalarWhereWithAggregatesInput | subscriptionScalarWhereWithAggregatesInput[]
+    OR?: subscriptionScalarWhereWithAggregatesInput[]
+    NOT?: subscriptionScalarWhereWithAggregatesInput | subscriptionScalarWhereWithAggregatesInput[]
+    id?: IntWithAggregatesFilter<"subscription"> | number
+    companyId?: IntWithAggregatesFilter<"subscription"> | number
+    planId?: IntNullableWithAggregatesFilter<"subscription"> | number | null
+    startDate?: DateTimeWithAggregatesFilter<"subscription"> | Date | string
+    expiryDate?: DateTimeWithAggregatesFilter<"subscription"> | Date | string
+    billingCycle?: StringWithAggregatesFilter<"subscription"> | string
+    amount?: FloatWithAggregatesFilter<"subscription"> | number
+    status?: StringWithAggregatesFilter<"subscription"> | string
+    paymentReference?: StringNullableWithAggregatesFilter<"subscription"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"subscription"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"subscription"> | Date | string
+  }
+
   export type accountgroupCreateInput = {
     name: string
     type: $Enums.accountgroup_type
@@ -98814,6 +100085,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateInput = {
@@ -98919,6 +100191,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUpdateInput = {
@@ -99023,6 +100296,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateInput = {
@@ -99128,6 +100402,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyCreateManyInput = {
@@ -101657,6 +102932,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     company?: companyCreateNestedManyWithoutPlanInput
     planrequest?: planrequestCreateNestedManyWithoutPlanInput
+    subscription?: subscriptionCreateNestedManyWithoutPlanInput
   }
 
   export type planUncheckedCreateInput = {
@@ -101677,6 +102953,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     company?: companyUncheckedCreateNestedManyWithoutPlanInput
     planrequest?: planrequestUncheckedCreateNestedManyWithoutPlanInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutPlanInput
   }
 
   export type planUpdateInput = {
@@ -101696,6 +102973,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     company?: companyUpdateManyWithoutPlanNestedInput
     planrequest?: planrequestUpdateManyWithoutPlanNestedInput
+    subscription?: subscriptionUpdateManyWithoutPlanNestedInput
   }
 
   export type planUncheckedUpdateInput = {
@@ -101716,6 +102994,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     company?: companyUncheckedUpdateManyWithoutPlanNestedInput
     planrequest?: planrequestUncheckedUpdateManyWithoutPlanNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutPlanNestedInput
   }
 
   export type planCreateManyInput = {
@@ -107566,6 +108845,99 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type subscriptionCreateInput = {
+    startDate?: Date | string
+    expiryDate: Date | string
+    billingCycle?: string
+    amount?: number
+    status?: string
+    paymentReference?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    company: companyCreateNestedOneWithoutSubscriptionInput
+    plan?: planCreateNestedOneWithoutSubscriptionInput
+  }
+
+  export type subscriptionUncheckedCreateInput = {
+    id?: number
+    companyId: number
+    planId?: number | null
+    startDate?: Date | string
+    expiryDate: Date | string
+    billingCycle?: string
+    amount?: number
+    status?: string
+    paymentReference?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type subscriptionUpdateInput = {
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiryDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    company?: companyUpdateOneRequiredWithoutSubscriptionNestedInput
+    plan?: planUpdateOneWithoutSubscriptionNestedInput
+  }
+
+  export type subscriptionUncheckedUpdateInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    companyId?: IntFieldUpdateOperationsInput | number
+    planId?: NullableIntFieldUpdateOperationsInput | number | null
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiryDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type subscriptionCreateManyInput = {
+    id?: number
+    companyId: number
+    planId?: number | null
+    startDate?: Date | string
+    expiryDate: Date | string
+    billingCycle?: string
+    amount?: number
+    status?: string
+    paymentReference?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type subscriptionUpdateManyMutationInput = {
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiryDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type subscriptionUncheckedUpdateManyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    companyId?: IntFieldUpdateOperationsInput | number
+    planId?: NullableIntFieldUpdateOperationsInput | number | null
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiryDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[]
@@ -108306,6 +109678,12 @@ export namespace Prisma {
     isNot?: company_smtp_settingsWhereInput | null
   }
 
+  export type SubscriptionListRelationFilter = {
+    every?: subscriptionWhereInput
+    some?: subscriptionWhereInput
+    none?: subscriptionWhereInput
+  }
+
   export type accountgroupOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
@@ -108455,6 +109833,10 @@ export namespace Prisma {
   }
 
   export type company_userOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type subscriptionOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -114337,6 +115719,62 @@ export namespace Prisma {
     companyId?: SortOrder
   }
 
+  export type subscriptionCountOrderByAggregateInput = {
+    id?: SortOrder
+    companyId?: SortOrder
+    planId?: SortOrder
+    startDate?: SortOrder
+    expiryDate?: SortOrder
+    billingCycle?: SortOrder
+    amount?: SortOrder
+    status?: SortOrder
+    paymentReference?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type subscriptionAvgOrderByAggregateInput = {
+    id?: SortOrder
+    companyId?: SortOrder
+    planId?: SortOrder
+    amount?: SortOrder
+  }
+
+  export type subscriptionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    companyId?: SortOrder
+    planId?: SortOrder
+    startDate?: SortOrder
+    expiryDate?: SortOrder
+    billingCycle?: SortOrder
+    amount?: SortOrder
+    status?: SortOrder
+    paymentReference?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type subscriptionMinOrderByAggregateInput = {
+    id?: SortOrder
+    companyId?: SortOrder
+    planId?: SortOrder
+    startDate?: SortOrder
+    expiryDate?: SortOrder
+    billingCycle?: SortOrder
+    amount?: SortOrder
+    status?: SortOrder
+    paymentReference?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type subscriptionSumOrderByAggregateInput = {
+    id?: SortOrder
+    companyId?: SortOrder
+    planId?: SortOrder
+    amount?: SortOrder
+  }
+
   export type companyCreateNestedOneWithoutAccountgroupInput = {
     create?: XOR<companyCreateWithoutAccountgroupInput, companyUncheckedCreateWithoutAccountgroupInput>
     connectOrCreate?: companyCreateOrConnectWithoutAccountgroupInput
@@ -114987,6 +116425,13 @@ export namespace Prisma {
     connect?: company_smtp_settingsWhereUniqueInput
   }
 
+  export type subscriptionCreateNestedManyWithoutCompanyInput = {
+    create?: XOR<subscriptionCreateWithoutCompanyInput, subscriptionUncheckedCreateWithoutCompanyInput> | subscriptionCreateWithoutCompanyInput[] | subscriptionUncheckedCreateWithoutCompanyInput[]
+    connectOrCreate?: subscriptionCreateOrConnectWithoutCompanyInput | subscriptionCreateOrConnectWithoutCompanyInput[]
+    createMany?: subscriptionCreateManyCompanyInputEnvelope
+    connect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+  }
+
   export type accountgroupUncheckedCreateNestedManyWithoutCompanyInput = {
     create?: XOR<accountgroupCreateWithoutCompanyInput, accountgroupUncheckedCreateWithoutCompanyInput> | accountgroupCreateWithoutCompanyInput[] | accountgroupUncheckedCreateWithoutCompanyInput[]
     connectOrCreate?: accountgroupCreateOrConnectWithoutCompanyInput | accountgroupCreateOrConnectWithoutCompanyInput[]
@@ -115285,6 +116730,13 @@ export namespace Prisma {
     create?: XOR<company_smtp_settingsCreateWithoutCompanyInput, company_smtp_settingsUncheckedCreateWithoutCompanyInput>
     connectOrCreate?: company_smtp_settingsCreateOrConnectWithoutCompanyInput
     connect?: company_smtp_settingsWhereUniqueInput
+  }
+
+  export type subscriptionUncheckedCreateNestedManyWithoutCompanyInput = {
+    create?: XOR<subscriptionCreateWithoutCompanyInput, subscriptionUncheckedCreateWithoutCompanyInput> | subscriptionCreateWithoutCompanyInput[] | subscriptionUncheckedCreateWithoutCompanyInput[]
+    connectOrCreate?: subscriptionCreateOrConnectWithoutCompanyInput | subscriptionCreateOrConnectWithoutCompanyInput[]
+    createMany?: subscriptionCreateManyCompanyInputEnvelope
+    connect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
   }
 
   export type NullableDateTimeFieldUpdateOperationsInput = {
@@ -115911,6 +117363,20 @@ export namespace Prisma {
     update?: XOR<XOR<company_smtp_settingsUpdateToOneWithWhereWithoutCompanyInput, company_smtp_settingsUpdateWithoutCompanyInput>, company_smtp_settingsUncheckedUpdateWithoutCompanyInput>
   }
 
+  export type subscriptionUpdateManyWithoutCompanyNestedInput = {
+    create?: XOR<subscriptionCreateWithoutCompanyInput, subscriptionUncheckedCreateWithoutCompanyInput> | subscriptionCreateWithoutCompanyInput[] | subscriptionUncheckedCreateWithoutCompanyInput[]
+    connectOrCreate?: subscriptionCreateOrConnectWithoutCompanyInput | subscriptionCreateOrConnectWithoutCompanyInput[]
+    upsert?: subscriptionUpsertWithWhereUniqueWithoutCompanyInput | subscriptionUpsertWithWhereUniqueWithoutCompanyInput[]
+    createMany?: subscriptionCreateManyCompanyInputEnvelope
+    set?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    disconnect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    delete?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    connect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    update?: subscriptionUpdateWithWhereUniqueWithoutCompanyInput | subscriptionUpdateWithWhereUniqueWithoutCompanyInput[]
+    updateMany?: subscriptionUpdateManyWithWhereWithoutCompanyInput | subscriptionUpdateManyWithWhereWithoutCompanyInput[]
+    deleteMany?: subscriptionScalarWhereInput | subscriptionScalarWhereInput[]
+  }
+
   export type accountgroupUncheckedUpdateManyWithoutCompanyNestedInput = {
     create?: XOR<accountgroupCreateWithoutCompanyInput, accountgroupUncheckedCreateWithoutCompanyInput> | accountgroupCreateWithoutCompanyInput[] | accountgroupUncheckedCreateWithoutCompanyInput[]
     connectOrCreate?: accountgroupCreateOrConnectWithoutCompanyInput | accountgroupCreateOrConnectWithoutCompanyInput[]
@@ -116507,6 +117973,20 @@ export namespace Prisma {
     delete?: company_smtp_settingsWhereInput | boolean
     connect?: company_smtp_settingsWhereUniqueInput
     update?: XOR<XOR<company_smtp_settingsUpdateToOneWithWhereWithoutCompanyInput, company_smtp_settingsUpdateWithoutCompanyInput>, company_smtp_settingsUncheckedUpdateWithoutCompanyInput>
+  }
+
+  export type subscriptionUncheckedUpdateManyWithoutCompanyNestedInput = {
+    create?: XOR<subscriptionCreateWithoutCompanyInput, subscriptionUncheckedCreateWithoutCompanyInput> | subscriptionCreateWithoutCompanyInput[] | subscriptionUncheckedCreateWithoutCompanyInput[]
+    connectOrCreate?: subscriptionCreateOrConnectWithoutCompanyInput | subscriptionCreateOrConnectWithoutCompanyInput[]
+    upsert?: subscriptionUpsertWithWhereUniqueWithoutCompanyInput | subscriptionUpsertWithWhereUniqueWithoutCompanyInput[]
+    createMany?: subscriptionCreateManyCompanyInputEnvelope
+    set?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    disconnect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    delete?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    connect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    update?: subscriptionUpdateWithWhereUniqueWithoutCompanyInput | subscriptionUpdateWithWhereUniqueWithoutCompanyInput[]
+    updateMany?: subscriptionUpdateManyWithWhereWithoutCompanyInput | subscriptionUpdateManyWithWhereWithoutCompanyInput[]
+    deleteMany?: subscriptionScalarWhereInput | subscriptionScalarWhereInput[]
   }
 
   export type companyCreateNestedOneWithoutCustomerInput = {
@@ -118851,6 +120331,13 @@ export namespace Prisma {
     connect?: planrequestWhereUniqueInput | planrequestWhereUniqueInput[]
   }
 
+  export type subscriptionCreateNestedManyWithoutPlanInput = {
+    create?: XOR<subscriptionCreateWithoutPlanInput, subscriptionUncheckedCreateWithoutPlanInput> | subscriptionCreateWithoutPlanInput[] | subscriptionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: subscriptionCreateOrConnectWithoutPlanInput | subscriptionCreateOrConnectWithoutPlanInput[]
+    createMany?: subscriptionCreateManyPlanInputEnvelope
+    connect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+  }
+
   export type companyUncheckedCreateNestedManyWithoutPlanInput = {
     create?: XOR<companyCreateWithoutPlanInput, companyUncheckedCreateWithoutPlanInput> | companyCreateWithoutPlanInput[] | companyUncheckedCreateWithoutPlanInput[]
     connectOrCreate?: companyCreateOrConnectWithoutPlanInput | companyCreateOrConnectWithoutPlanInput[]
@@ -118863,6 +120350,13 @@ export namespace Prisma {
     connectOrCreate?: planrequestCreateOrConnectWithoutPlanInput | planrequestCreateOrConnectWithoutPlanInput[]
     createMany?: planrequestCreateManyPlanInputEnvelope
     connect?: planrequestWhereUniqueInput | planrequestWhereUniqueInput[]
+  }
+
+  export type subscriptionUncheckedCreateNestedManyWithoutPlanInput = {
+    create?: XOR<subscriptionCreateWithoutPlanInput, subscriptionUncheckedCreateWithoutPlanInput> | subscriptionCreateWithoutPlanInput[] | subscriptionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: subscriptionCreateOrConnectWithoutPlanInput | subscriptionCreateOrConnectWithoutPlanInput[]
+    createMany?: subscriptionCreateManyPlanInputEnvelope
+    connect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
   }
 
   export type companyUpdateManyWithoutPlanNestedInput = {
@@ -118893,6 +120387,20 @@ export namespace Prisma {
     deleteMany?: planrequestScalarWhereInput | planrequestScalarWhereInput[]
   }
 
+  export type subscriptionUpdateManyWithoutPlanNestedInput = {
+    create?: XOR<subscriptionCreateWithoutPlanInput, subscriptionUncheckedCreateWithoutPlanInput> | subscriptionCreateWithoutPlanInput[] | subscriptionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: subscriptionCreateOrConnectWithoutPlanInput | subscriptionCreateOrConnectWithoutPlanInput[]
+    upsert?: subscriptionUpsertWithWhereUniqueWithoutPlanInput | subscriptionUpsertWithWhereUniqueWithoutPlanInput[]
+    createMany?: subscriptionCreateManyPlanInputEnvelope
+    set?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    disconnect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    delete?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    connect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    update?: subscriptionUpdateWithWhereUniqueWithoutPlanInput | subscriptionUpdateWithWhereUniqueWithoutPlanInput[]
+    updateMany?: subscriptionUpdateManyWithWhereWithoutPlanInput | subscriptionUpdateManyWithWhereWithoutPlanInput[]
+    deleteMany?: subscriptionScalarWhereInput | subscriptionScalarWhereInput[]
+  }
+
   export type companyUncheckedUpdateManyWithoutPlanNestedInput = {
     create?: XOR<companyCreateWithoutPlanInput, companyUncheckedCreateWithoutPlanInput> | companyCreateWithoutPlanInput[] | companyUncheckedCreateWithoutPlanInput[]
     connectOrCreate?: companyCreateOrConnectWithoutPlanInput | companyCreateOrConnectWithoutPlanInput[]
@@ -118919,6 +120427,20 @@ export namespace Prisma {
     update?: planrequestUpdateWithWhereUniqueWithoutPlanInput | planrequestUpdateWithWhereUniqueWithoutPlanInput[]
     updateMany?: planrequestUpdateManyWithWhereWithoutPlanInput | planrequestUpdateManyWithWhereWithoutPlanInput[]
     deleteMany?: planrequestScalarWhereInput | planrequestScalarWhereInput[]
+  }
+
+  export type subscriptionUncheckedUpdateManyWithoutPlanNestedInput = {
+    create?: XOR<subscriptionCreateWithoutPlanInput, subscriptionUncheckedCreateWithoutPlanInput> | subscriptionCreateWithoutPlanInput[] | subscriptionUncheckedCreateWithoutPlanInput[]
+    connectOrCreate?: subscriptionCreateOrConnectWithoutPlanInput | subscriptionCreateOrConnectWithoutPlanInput[]
+    upsert?: subscriptionUpsertWithWhereUniqueWithoutPlanInput | subscriptionUpsertWithWhereUniqueWithoutPlanInput[]
+    createMany?: subscriptionCreateManyPlanInputEnvelope
+    set?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    disconnect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    delete?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    connect?: subscriptionWhereUniqueInput | subscriptionWhereUniqueInput[]
+    update?: subscriptionUpdateWithWhereUniqueWithoutPlanInput | subscriptionUpdateWithWhereUniqueWithoutPlanInput[]
+    updateMany?: subscriptionUpdateManyWithWhereWithoutPlanInput | subscriptionUpdateManyWithWhereWithoutPlanInput[]
+    deleteMany?: subscriptionScalarWhereInput | subscriptionScalarWhereInput[]
   }
 
   export type planCreateNestedOneWithoutPlanrequestInput = {
@@ -124723,6 +126245,36 @@ export namespace Prisma {
     update?: XOR<XOR<purchasebillUpdateToOneWithWhereWithoutAdvanceadjustmentsInput, purchasebillUpdateWithoutAdvanceadjustmentsInput>, purchasebillUncheckedUpdateWithoutAdvanceadjustmentsInput>
   }
 
+  export type companyCreateNestedOneWithoutSubscriptionInput = {
+    create?: XOR<companyCreateWithoutSubscriptionInput, companyUncheckedCreateWithoutSubscriptionInput>
+    connectOrCreate?: companyCreateOrConnectWithoutSubscriptionInput
+    connect?: companyWhereUniqueInput
+  }
+
+  export type planCreateNestedOneWithoutSubscriptionInput = {
+    create?: XOR<planCreateWithoutSubscriptionInput, planUncheckedCreateWithoutSubscriptionInput>
+    connectOrCreate?: planCreateOrConnectWithoutSubscriptionInput
+    connect?: planWhereUniqueInput
+  }
+
+  export type companyUpdateOneRequiredWithoutSubscriptionNestedInput = {
+    create?: XOR<companyCreateWithoutSubscriptionInput, companyUncheckedCreateWithoutSubscriptionInput>
+    connectOrCreate?: companyCreateOrConnectWithoutSubscriptionInput
+    upsert?: companyUpsertWithoutSubscriptionInput
+    connect?: companyWhereUniqueInput
+    update?: XOR<XOR<companyUpdateToOneWithWhereWithoutSubscriptionInput, companyUpdateWithoutSubscriptionInput>, companyUncheckedUpdateWithoutSubscriptionInput>
+  }
+
+  export type planUpdateOneWithoutSubscriptionNestedInput = {
+    create?: XOR<planCreateWithoutSubscriptionInput, planUncheckedCreateWithoutSubscriptionInput>
+    connectOrCreate?: planCreateOrConnectWithoutSubscriptionInput
+    upsert?: planUpsertWithoutSubscriptionInput
+    disconnect?: planWhereInput | boolean
+    delete?: planWhereInput | boolean
+    connect?: planWhereUniqueInput
+    update?: XOR<XOR<planUpdateToOneWithWhereWithoutSubscriptionInput, planUpdateWithoutSubscriptionInput>, planUncheckedUpdateWithoutSubscriptionInput>
+  }
+
   export type NestedIntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[]
@@ -125431,6 +126983,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutAccountgroupInput = {
@@ -125535,6 +127088,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutAccountgroupInput = {
@@ -125746,6 +127300,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutAccountgroupInput = {
@@ -125850,6 +127405,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type accountsubgroupUpsertWithWhereUniqueWithoutAccountgroupInput = {
@@ -126019,6 +127575,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutAccountsubgroupInput = {
@@ -126123,6 +127680,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutAccountsubgroupInput = {
@@ -126331,6 +127889,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutAccountsubgroupInput = {
@@ -126435,6 +127994,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type accountgroupUpsertWithoutAccountsubgroupInput = {
@@ -126584,6 +128144,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutBankaccountInput = {
@@ -126688,6 +128249,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutBankaccountInput = {
@@ -126840,6 +128402,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutBankaccountInput = {
@@ -126944,6 +128507,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type banktransactionUpsertWithWhereUniqueWithoutBankaccountInput = {
@@ -127111,6 +128675,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutBanktransactionInput = {
@@ -127215,6 +128780,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutBanktransactionInput = {
@@ -127372,6 +128938,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutBanktransactionInput = {
@@ -127476,6 +129043,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyCreateWithoutCategoryInput = {
@@ -127579,6 +129147,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutCategoryInput = {
@@ -127683,6 +129252,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutCategoryInput = {
@@ -127901,6 +129471,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutCategoryInput = {
@@ -128005,6 +129576,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type productUpsertWithWhereUniqueWithoutCategoryInput = {
@@ -128221,6 +129793,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     planrequest?: planrequestCreateNestedManyWithoutPlanInput
+    subscription?: subscriptionCreateNestedManyWithoutPlanInput
   }
 
   export type planUncheckedCreateWithoutCompanyInput = {
@@ -128240,6 +129813,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     planrequest?: planrequestUncheckedCreateNestedManyWithoutPlanInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutPlanInput
   }
 
   export type planCreateOrConnectWithoutCompanyInput = {
@@ -130326,6 +131900,41 @@ export namespace Prisma {
     create: XOR<company_smtp_settingsCreateWithoutCompanyInput, company_smtp_settingsUncheckedCreateWithoutCompanyInput>
   }
 
+  export type subscriptionCreateWithoutCompanyInput = {
+    startDate?: Date | string
+    expiryDate: Date | string
+    billingCycle?: string
+    amount?: number
+    status?: string
+    paymentReference?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    plan?: planCreateNestedOneWithoutSubscriptionInput
+  }
+
+  export type subscriptionUncheckedCreateWithoutCompanyInput = {
+    id?: number
+    planId?: number | null
+    startDate?: Date | string
+    expiryDate: Date | string
+    billingCycle?: string
+    amount?: number
+    status?: string
+    paymentReference?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type subscriptionCreateOrConnectWithoutCompanyInput = {
+    where: subscriptionWhereUniqueInput
+    create: XOR<subscriptionCreateWithoutCompanyInput, subscriptionUncheckedCreateWithoutCompanyInput>
+  }
+
+  export type subscriptionCreateManyCompanyInputEnvelope = {
+    data: subscriptionCreateManyCompanyInput | subscriptionCreateManyCompanyInput[]
+    skipDuplicates?: boolean
+  }
+
   export type accountgroupUpsertWithWhereUniqueWithoutCompanyInput = {
     where: accountgroupWhereUniqueInput
     update: XOR<accountgroupUpdateWithoutCompanyInput, accountgroupUncheckedUpdateWithoutCompanyInput>
@@ -130473,6 +132082,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     planrequest?: planrequestUpdateManyWithoutPlanNestedInput
+    subscription?: subscriptionUpdateManyWithoutPlanNestedInput
   }
 
   export type planUncheckedUpdateWithoutCompanyInput = {
@@ -130492,6 +132102,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     planrequest?: planrequestUncheckedUpdateManyWithoutPlanNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutPlanNestedInput
   }
 
   export type customerUpsertWithWhereUniqueWithoutCompanyInput = {
@@ -131951,6 +133562,39 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type subscriptionUpsertWithWhereUniqueWithoutCompanyInput = {
+    where: subscriptionWhereUniqueInput
+    update: XOR<subscriptionUpdateWithoutCompanyInput, subscriptionUncheckedUpdateWithoutCompanyInput>
+    create: XOR<subscriptionCreateWithoutCompanyInput, subscriptionUncheckedCreateWithoutCompanyInput>
+  }
+
+  export type subscriptionUpdateWithWhereUniqueWithoutCompanyInput = {
+    where: subscriptionWhereUniqueInput
+    data: XOR<subscriptionUpdateWithoutCompanyInput, subscriptionUncheckedUpdateWithoutCompanyInput>
+  }
+
+  export type subscriptionUpdateManyWithWhereWithoutCompanyInput = {
+    where: subscriptionScalarWhereInput
+    data: XOR<subscriptionUpdateManyMutationInput, subscriptionUncheckedUpdateManyWithoutCompanyInput>
+  }
+
+  export type subscriptionScalarWhereInput = {
+    AND?: subscriptionScalarWhereInput | subscriptionScalarWhereInput[]
+    OR?: subscriptionScalarWhereInput[]
+    NOT?: subscriptionScalarWhereInput | subscriptionScalarWhereInput[]
+    id?: IntFilter<"subscription"> | number
+    companyId?: IntFilter<"subscription"> | number
+    planId?: IntNullableFilter<"subscription"> | number | null
+    startDate?: DateTimeFilter<"subscription"> | Date | string
+    expiryDate?: DateTimeFilter<"subscription"> | Date | string
+    billingCycle?: StringFilter<"subscription"> | string
+    amount?: FloatFilter<"subscription"> | number
+    status?: StringFilter<"subscription"> | string
+    paymentReference?: StringNullableFilter<"subscription"> | string | null
+    createdAt?: DateTimeFilter<"subscription"> | Date | string
+    updatedAt?: DateTimeFilter<"subscription"> | Date | string
+  }
+
   export type companyCreateWithoutCustomerInput = {
     name: string
     email: string
@@ -132052,6 +133696,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutCustomerInput = {
@@ -132156,6 +133801,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutCustomerInput = {
@@ -132930,6 +134576,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutCustomerInput = {
@@ -133034,6 +134681,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type deliverychallanUpsertWithWhereUniqueWithoutCustomerInput = {
@@ -133366,6 +135014,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutDeliverychallanInput = {
@@ -133470,6 +135119,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutDeliverychallanInput = {
@@ -134025,6 +135675,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutDeliverychallanInput = {
@@ -134129,6 +135780,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type customerUpsertWithoutDeliverychallanInput = {
@@ -135056,6 +136708,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutExpenseentryInput = {
@@ -135160,6 +136813,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutExpenseentryInput = {
@@ -135279,6 +136933,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutExpenseentryInput = {
@@ -135383,6 +137038,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyCreateWithoutGoodsreceiptnoteInput = {
@@ -135486,6 +137142,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutGoodsreceiptnoteInput = {
@@ -135590,6 +137247,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutGoodsreceiptnoteInput = {
@@ -136031,6 +137689,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutGoodsreceiptnoteInput = {
@@ -136135,6 +137794,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type purchaseorderUpsertWithoutGoodsreceiptnoteInput = {
@@ -136898,6 +138558,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutIncomeentryInput = {
@@ -137002,6 +138663,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutIncomeentryInput = {
@@ -137121,6 +138783,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutIncomeentryInput = {
@@ -137225,6 +138888,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyCreateWithoutInventoryadjustmentInput = {
@@ -137328,6 +138992,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutInventoryadjustmentInput = {
@@ -137432,6 +139097,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutInventoryadjustmentInput = {
@@ -137654,6 +139320,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutInventoryadjustmentInput = {
@@ -137758,6 +139425,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type warehouseUpsertWithoutInventoryadjustmentInput = {
@@ -138379,6 +140047,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutInventorytransactionInput = {
@@ -138483,6 +140152,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutInventorytransactionInput = {
@@ -138874,6 +140544,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutInventorytransactionInput = {
@@ -138978,6 +140649,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type warehouseUpsertWithoutInventorytransaction_inventorytransaction_fromWarehouseIdTowarehouseInput = {
@@ -139399,6 +141071,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutInvoiceInput = {
@@ -139503,6 +141176,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutInvoiceInput = {
@@ -140266,6 +141940,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutInvoiceInput = {
@@ -140370,6 +142045,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type customerUpsertWithoutInvoiceInput = {
@@ -141678,6 +143354,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutJournalentryInput = {
@@ -141782,6 +143459,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutJournalentryInput = {
@@ -141954,6 +143632,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutJournalentryInput = {
@@ -142058,6 +143737,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type transactionUpsertWithWhereUniqueWithoutJournalentryInput = {
@@ -142177,6 +143857,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutLedgerInput = {
@@ -142281,6 +143962,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutLedgerInput = {
@@ -143288,6 +144970,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutLedgerInput = {
@@ -143392,6 +145075,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type customerUpsertWithoutLedgerInput = {
@@ -144022,6 +145706,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutPasswordrequestInput = {
@@ -144126,6 +145811,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutPasswordrequestInput = {
@@ -144283,6 +145969,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutPasswordrequestInput = {
@@ -144387,6 +146074,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type userUpsertWithoutPasswordrequestInput = {
@@ -144534,6 +146222,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutPaymentInput = {
@@ -144638,6 +146327,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutPaymentInput = {
@@ -145198,6 +146888,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutPaymentInput = {
@@ -145302,6 +146993,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type purchasebillUpsertWithoutPaymentInput = {
@@ -145818,6 +147510,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutPlanInput = {
@@ -145922,6 +147615,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutPlanInput = {
@@ -145970,6 +147664,41 @@ export namespace Prisma {
 
   export type planrequestCreateManyPlanInputEnvelope = {
     data: planrequestCreateManyPlanInput | planrequestCreateManyPlanInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type subscriptionCreateWithoutPlanInput = {
+    startDate?: Date | string
+    expiryDate: Date | string
+    billingCycle?: string
+    amount?: number
+    status?: string
+    paymentReference?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    company: companyCreateNestedOneWithoutSubscriptionInput
+  }
+
+  export type subscriptionUncheckedCreateWithoutPlanInput = {
+    id?: number
+    companyId: number
+    startDate?: Date | string
+    expiryDate: Date | string
+    billingCycle?: string
+    amount?: number
+    status?: string
+    paymentReference?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type subscriptionCreateOrConnectWithoutPlanInput = {
+    where: subscriptionWhereUniqueInput
+    create: XOR<subscriptionCreateWithoutPlanInput, subscriptionUncheckedCreateWithoutPlanInput>
+  }
+
+  export type subscriptionCreateManyPlanInputEnvelope = {
+    data: subscriptionCreateManyPlanInput | subscriptionCreateManyPlanInput[]
     skipDuplicates?: boolean
   }
 
@@ -146089,6 +147818,22 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"planrequest"> | Date | string
   }
 
+  export type subscriptionUpsertWithWhereUniqueWithoutPlanInput = {
+    where: subscriptionWhereUniqueInput
+    update: XOR<subscriptionUpdateWithoutPlanInput, subscriptionUncheckedUpdateWithoutPlanInput>
+    create: XOR<subscriptionCreateWithoutPlanInput, subscriptionUncheckedCreateWithoutPlanInput>
+  }
+
+  export type subscriptionUpdateWithWhereUniqueWithoutPlanInput = {
+    where: subscriptionWhereUniqueInput
+    data: XOR<subscriptionUpdateWithoutPlanInput, subscriptionUncheckedUpdateWithoutPlanInput>
+  }
+
+  export type subscriptionUpdateManyWithWhereWithoutPlanInput = {
+    where: subscriptionScalarWhereInput
+    data: XOR<subscriptionUpdateManyMutationInput, subscriptionUncheckedUpdateManyWithoutPlanInput>
+  }
+
   export type planCreateWithoutPlanrequestInput = {
     name: string
     basePrice?: number
@@ -146105,6 +147850,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     company?: companyCreateNestedManyWithoutPlanInput
+    subscription?: subscriptionCreateNestedManyWithoutPlanInput
   }
 
   export type planUncheckedCreateWithoutPlanrequestInput = {
@@ -146124,6 +147870,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     company?: companyUncheckedCreateNestedManyWithoutPlanInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutPlanInput
   }
 
   export type planCreateOrConnectWithoutPlanrequestInput = {
@@ -146158,6 +147905,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     company?: companyUpdateManyWithoutPlanNestedInput
+    subscription?: subscriptionUpdateManyWithoutPlanNestedInput
   }
 
   export type planUncheckedUpdateWithoutPlanrequestInput = {
@@ -146177,6 +147925,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     company?: companyUncheckedUpdateManyWithoutPlanNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutPlanNestedInput
   }
 
   export type companyCreateWithoutPosinvoiceInput = {
@@ -146280,6 +148029,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutPosinvoiceInput = {
@@ -146384,6 +148134,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutPosinvoiceInput = {
@@ -146699,6 +148450,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutPosinvoiceInput = {
@@ -146803,6 +148555,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type customerUpsertWithoutPosinvoiceInput = {
@@ -147862,6 +149615,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutProductInput = {
@@ -147966,6 +149720,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutProductInput = {
@@ -148823,6 +150578,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutProductInput = {
@@ -148927,6 +150683,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type uomUpsertWithoutProductInput = {
@@ -149668,6 +151425,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutPurchasebillInput = {
@@ -149772,6 +151530,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutPurchasebillInput = {
@@ -150395,6 +152154,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutPurchasebillInput = {
@@ -150499,6 +152259,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type goodsreceiptnoteUpsertWithoutPurchasebillInput = {
@@ -151754,6 +153515,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutPurchaseorderInput = {
@@ -151858,6 +153620,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutPurchaseorderInput = {
@@ -152206,6 +153969,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutPurchaseorderInput = {
@@ -152310,6 +154074,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type purchasequotationUpsertWithoutPurchaseorderInput = {
@@ -153299,6 +155064,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutPurchasequotationInput = {
@@ -153403,6 +155169,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutPurchasequotationInput = {
@@ -153751,6 +155518,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutPurchasequotationInput = {
@@ -153855,6 +155623,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type vendorUpsertWithoutPurchasequotationInput = {
@@ -154652,6 +156421,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutPurchasereturnInput = {
@@ -154756,6 +156526,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutPurchasereturnInput = {
@@ -155118,6 +156889,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutPurchasereturnInput = {
@@ -155222,6 +156994,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type purchasebillUpsertWithoutPurchasereturnInput = {
@@ -155975,6 +157748,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutReceiptInput = {
@@ -156079,6 +157853,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutReceiptInput = {
@@ -156649,6 +158424,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutReceiptInput = {
@@ -156753,6 +158529,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type customerUpsertWithoutReceiptInput = {
@@ -157440,6 +159217,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutSalesorderInput = {
@@ -157544,6 +159322,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutSalesorderInput = {
@@ -157914,6 +159693,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutSalesorderInput = {
@@ -158018,6 +159798,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type customerUpsertWithoutSalesorderInput = {
@@ -159109,6 +160890,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutSalesquotationInput = {
@@ -159213,6 +160995,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutSalesquotationInput = {
@@ -159565,6 +161348,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutSalesquotationInput = {
@@ -159669,6 +161453,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type customerUpsertWithoutSalesquotationInput = {
@@ -160586,6 +162371,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutSalesreturnInput = {
@@ -160690,6 +162476,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutSalesreturnInput = {
@@ -161058,6 +162845,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutSalesreturnInput = {
@@ -161162,6 +162950,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type customerUpsertWithoutSalesreturnInput = {
@@ -162064,6 +163853,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutServiceInput = {
@@ -162168,6 +163958,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutServiceInput = {
@@ -162389,6 +164180,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutServiceInput = {
@@ -162493,6 +164285,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type uomUpsertWithoutServiceInput = {
@@ -162996,6 +164789,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutStocktransferInput = {
@@ -163100,6 +164894,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutStocktransferInput = {
@@ -163322,6 +165117,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutStocktransferInput = {
@@ -163426,6 +165222,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type warehouseUpsertWithoutStocktransferInput = {
@@ -164027,6 +165824,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutTransactionInput = {
@@ -164131,6 +165929,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutTransactionInput = {
@@ -164770,6 +166569,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutTransactionInput = {
@@ -164874,6 +166674,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type ledgerUpsertWithoutTransaction_transaction_creditLedgerIdToledgerInput = {
@@ -165545,6 +167346,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutUomInput = {
@@ -165649,6 +167451,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutUomInput = {
@@ -166522,6 +168325,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutUomInput = {
@@ -166626,6 +168430,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type uomUpsertWithoutChildUnitsInput = {
@@ -167006,6 +168811,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutUserInput = {
@@ -167110,6 +168916,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutUserInput = {
@@ -167342,6 +169149,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutUserInput = {
@@ -167446,6 +169254,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type auditlogUpsertWithWhereUniqueWithoutUserInput = {
@@ -167635,6 +169444,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonCreateNestedManyWithoutCompanyInput
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutCompany_userInput = {
@@ -167739,6 +169549,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonUncheckedCreateNestedManyWithoutCompanyInput
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutCompany_userInput = {
@@ -167902,6 +169713,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonUpdateManyWithoutCompanyNestedInput
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutCompany_userInput = {
@@ -168006,6 +169818,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonUncheckedUpdateManyWithoutCompanyNestedInput
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyCreateWithoutCompany_smtp_settingsInput = {
@@ -168109,6 +169922,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonCreateNestedManyWithoutCompanyInput
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutCompany_smtp_settingsInput = {
@@ -168213,6 +170027,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonUncheckedCreateNestedManyWithoutCompanyInput
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutCompany_smtp_settingsInput = {
@@ -168332,6 +170147,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonUpdateManyWithoutCompanyNestedInput
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutCompany_smtp_settingsInput = {
@@ -168436,6 +170252,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonUncheckedUpdateManyWithoutCompanyNestedInput
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type goodsreceiptnoteCreateWithoutVendorInput = {
@@ -169087,6 +170904,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutVendorInput = {
@@ -169191,6 +171009,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutVendorInput = {
@@ -169504,6 +171323,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutVendorInput = {
@@ -169608,6 +171428,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type deliverychallanitemCreateWithoutWarehouseInput = {
@@ -170383,6 +172204,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutWarehouseInput = {
@@ -170487,6 +172309,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutWarehouseInput = {
@@ -170931,6 +172754,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutWarehouseInput = {
@@ -171035,6 +172859,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type inventory_batchUpsertWithWhereUniqueWithoutWarehouseInput = {
@@ -171154,6 +172979,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutVoucherInput = {
@@ -171258,6 +173084,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutVoucherInput = {
@@ -171750,6 +173577,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutVoucherInput = {
@@ -171854,6 +173682,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type vendorUpsertWithoutVoucherInput = {
@@ -172757,6 +174586,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutRoleInput = {
@@ -172861,6 +174691,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutRoleInput = {
@@ -172980,6 +174811,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutRoleInput = {
@@ -173084,6 +174916,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type customerCreateWithoutShippingaddressInput = {
@@ -175376,6 +177209,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutTransaction_numberingInput = {
@@ -175480,6 +177314,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutTransaction_numberingInput = {
@@ -175599,6 +177434,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutTransaction_numberingInput = {
@@ -175703,6 +177539,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type userCreateWithoutAuditlogInput = {
@@ -175844,6 +177681,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutAuditlogInput = {
@@ -175948,6 +177786,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutAuditlogInput = {
@@ -176111,6 +177950,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutAuditlogInput = {
@@ -176215,6 +178055,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyCreateWithoutSalespersonInput = {
@@ -176318,6 +178159,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutSalespersonInput = {
@@ -176422,6 +178264,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutSalespersonInput = {
@@ -176763,6 +178606,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutSalespersonInput = {
@@ -176867,6 +178711,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type invoiceUpsertWithWhereUniqueWithoutSalespersonInput = {
@@ -177002,6 +178847,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutDeliverypersonInput = {
@@ -177106,6 +178952,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutDeliverypersonInput = {
@@ -177225,6 +179072,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutDeliverypersonInput = {
@@ -177329,6 +179177,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyCreateWithoutAdvanceadjustmentInput = {
@@ -177432,6 +179281,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonCreateNestedManyWithoutCompanyInput
     company_user?: company_userCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionCreateNestedManyWithoutCompanyInput
   }
 
   export type companyUncheckedCreateWithoutAdvanceadjustmentInput = {
@@ -177536,6 +179386,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonUncheckedCreateNestedManyWithoutCompanyInput
     company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
     company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+    subscription?: subscriptionUncheckedCreateNestedManyWithoutCompanyInput
   }
 
   export type companyCreateOrConnectWithoutAdvanceadjustmentInput = {
@@ -177979,6 +179830,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutAdvanceadjustmentInput = {
@@ -178083,6 +179935,7 @@ export namespace Prisma {
     deliveryperson?: deliverypersonUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type receiptUpsertWithoutAdvanceadjustmentsInput = {
@@ -178431,6 +180284,534 @@ export namespace Prisma {
     transaction?: transactionUncheckedUpdateManyWithoutPurchasebillNestedInput
     inventory_batch?: inventory_batchUncheckedUpdateManyWithoutPurchasebillNestedInput
     allocations?: paymentbillallocationUncheckedUpdateManyWithoutPurchasebillNestedInput
+  }
+
+  export type companyCreateWithoutSubscriptionInput = {
+    name: string
+    email: string
+    logo?: string | null
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    invoiceTemplate?: string
+    invoiceColor?: string
+    showQrCode?: boolean
+    invoiceLogo?: string | null
+    planName?: string | null
+    planType?: string | null
+    phone?: string | null
+    website?: string | null
+    address?: string | null
+    city?: string | null
+    state?: string | null
+    zip?: string | null
+    country?: string | null
+    currency?: string | null
+    originalCurrency?: string | null
+    bankName?: string | null
+    accountHolder?: string | null
+    accountName?: string | null
+    accountNumber?: string | null
+    iban?: string | null
+    bic?: string | null
+    sortCode?: string | null
+    ifsc?: string | null
+    vatNumber?: string | null
+    defaultVatRate?: string | null
+    gstNumber?: string | null
+    defaultVatRateId?: number | null
+    isVatRegistered?: boolean
+    terms?: string | null
+    termsInvoice?: string | null
+    termsReceipt?: string | null
+    termsPurchase?: string | null
+    termsSalesOrder?: string | null
+    termsQuotation?: string | null
+    termsCreditNote?: string | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    inventoryConfig?: string | null
+    invoiceTableHeaders?: string | null
+    invoiceLabels?: string | null
+    receiptTemplate?: string | null
+    receiptColor?: string | null
+    receiptLabels?: string | null
+    receiptTableHeaders?: string | null
+    paymentTemplate?: string | null
+    paymentColor?: string | null
+    paymentLabels?: string | null
+    paymentTableHeaders?: string | null
+    customFieldsConfig?: string | null
+    documentTitles?: string | null
+    invoiceDeletionPassword?: string | null
+    accountgroup?: accountgroupCreateNestedManyWithoutCompanyInput
+    accountsubgroup?: accountsubgroupCreateNestedManyWithoutCompanyInput
+    bankaccount?: bankaccountCreateNestedManyWithoutCompanyInput
+    banktransaction?: banktransactionCreateNestedManyWithoutCompanyInput
+    category?: categoryCreateNestedManyWithoutCompanyInput
+    plan?: planCreateNestedOneWithoutCompanyInput
+    customer?: customerCreateNestedManyWithoutCompanyInput
+    deliverychallan?: deliverychallanCreateNestedManyWithoutCompanyInput
+    expenseentry?: expenseentryCreateNestedManyWithoutCompanyInput
+    goodsreceiptnote?: goodsreceiptnoteCreateNestedManyWithoutCompanyInput
+    incomeentry?: incomeentryCreateNestedManyWithoutCompanyInput
+    inventoryadjustment?: inventoryadjustmentCreateNestedManyWithoutCompanyInput
+    inventorytransaction?: inventorytransactionCreateNestedManyWithoutCompanyInput
+    invoice?: invoiceCreateNestedManyWithoutCompanyInput
+    journalentry?: journalentryCreateNestedManyWithoutCompanyInput
+    ledger?: ledgerCreateNestedManyWithoutCompanyInput
+    passwordrequest?: passwordrequestCreateNestedManyWithoutCompanyInput
+    payment?: paymentCreateNestedManyWithoutCompanyInput
+    posinvoice?: posinvoiceCreateNestedManyWithoutCompanyInput
+    product?: productCreateNestedManyWithoutCompanyInput
+    purchasebill?: purchasebillCreateNestedManyWithoutCompanyInput
+    purchaseorder?: purchaseorderCreateNestedManyWithoutCompanyInput
+    purchasequotation?: purchasequotationCreateNestedManyWithoutCompanyInput
+    purchasereturn?: purchasereturnCreateNestedManyWithoutCompanyInput
+    receipt?: receiptCreateNestedManyWithoutCompanyInput
+    salesorder?: salesorderCreateNestedManyWithoutCompanyInput
+    salesquotation?: salesquotationCreateNestedManyWithoutCompanyInput
+    salesreturn?: salesreturnCreateNestedManyWithoutCompanyInput
+    service?: serviceCreateNestedManyWithoutCompanyInput
+    stocktransfer?: stocktransferCreateNestedManyWithoutCompanyInput
+    transaction?: transactionCreateNestedManyWithoutCompanyInput
+    uom?: uomCreateNestedManyWithoutCompanyInput
+    user?: userCreateNestedManyWithoutCompanyInput
+    vendor?: vendorCreateNestedManyWithoutCompanyInput
+    warehouse?: warehouseCreateNestedManyWithoutCompanyInput
+    voucher?: voucherCreateNestedManyWithoutCompanyInput
+    role?: roleCreateNestedManyWithoutCompanyInput
+    transaction_numbering?: transaction_numberingCreateNestedManyWithoutCompanyInput
+    auditlog?: auditlogCreateNestedManyWithoutCompanyInput
+    salesperson?: salespersonCreateNestedManyWithoutCompanyInput
+    deliveryperson?: deliverypersonCreateNestedManyWithoutCompanyInput
+    advanceadjustment?: advanceadjustmentCreateNestedManyWithoutCompanyInput
+    company_user?: company_userCreateNestedManyWithoutCompanyInput
+    company_smtp_settings?: company_smtp_settingsCreateNestedOneWithoutCompanyInput
+  }
+
+  export type companyUncheckedCreateWithoutSubscriptionInput = {
+    id?: number
+    name: string
+    email: string
+    logo?: string | null
+    startDate?: Date | string | null
+    endDate?: Date | string | null
+    invoiceTemplate?: string
+    invoiceColor?: string
+    showQrCode?: boolean
+    invoiceLogo?: string | null
+    planName?: string | null
+    planId?: number | null
+    planType?: string | null
+    phone?: string | null
+    website?: string | null
+    address?: string | null
+    city?: string | null
+    state?: string | null
+    zip?: string | null
+    country?: string | null
+    currency?: string | null
+    originalCurrency?: string | null
+    bankName?: string | null
+    accountHolder?: string | null
+    accountName?: string | null
+    accountNumber?: string | null
+    iban?: string | null
+    bic?: string | null
+    sortCode?: string | null
+    ifsc?: string | null
+    vatNumber?: string | null
+    defaultVatRate?: string | null
+    gstNumber?: string | null
+    defaultVatRateId?: number | null
+    isVatRegistered?: boolean
+    terms?: string | null
+    termsInvoice?: string | null
+    termsReceipt?: string | null
+    termsPurchase?: string | null
+    termsSalesOrder?: string | null
+    termsQuotation?: string | null
+    termsCreditNote?: string | null
+    notes?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    inventoryConfig?: string | null
+    invoiceTableHeaders?: string | null
+    invoiceLabels?: string | null
+    receiptTemplate?: string | null
+    receiptColor?: string | null
+    receiptLabels?: string | null
+    receiptTableHeaders?: string | null
+    paymentTemplate?: string | null
+    paymentColor?: string | null
+    paymentLabels?: string | null
+    paymentTableHeaders?: string | null
+    customFieldsConfig?: string | null
+    documentTitles?: string | null
+    invoiceDeletionPassword?: string | null
+    accountgroup?: accountgroupUncheckedCreateNestedManyWithoutCompanyInput
+    accountsubgroup?: accountsubgroupUncheckedCreateNestedManyWithoutCompanyInput
+    bankaccount?: bankaccountUncheckedCreateNestedManyWithoutCompanyInput
+    banktransaction?: banktransactionUncheckedCreateNestedManyWithoutCompanyInput
+    category?: categoryUncheckedCreateNestedManyWithoutCompanyInput
+    customer?: customerUncheckedCreateNestedManyWithoutCompanyInput
+    deliverychallan?: deliverychallanUncheckedCreateNestedManyWithoutCompanyInput
+    expenseentry?: expenseentryUncheckedCreateNestedManyWithoutCompanyInput
+    goodsreceiptnote?: goodsreceiptnoteUncheckedCreateNestedManyWithoutCompanyInput
+    incomeentry?: incomeentryUncheckedCreateNestedManyWithoutCompanyInput
+    inventoryadjustment?: inventoryadjustmentUncheckedCreateNestedManyWithoutCompanyInput
+    inventorytransaction?: inventorytransactionUncheckedCreateNestedManyWithoutCompanyInput
+    invoice?: invoiceUncheckedCreateNestedManyWithoutCompanyInput
+    journalentry?: journalentryUncheckedCreateNestedManyWithoutCompanyInput
+    ledger?: ledgerUncheckedCreateNestedManyWithoutCompanyInput
+    passwordrequest?: passwordrequestUncheckedCreateNestedManyWithoutCompanyInput
+    payment?: paymentUncheckedCreateNestedManyWithoutCompanyInput
+    posinvoice?: posinvoiceUncheckedCreateNestedManyWithoutCompanyInput
+    product?: productUncheckedCreateNestedManyWithoutCompanyInput
+    purchasebill?: purchasebillUncheckedCreateNestedManyWithoutCompanyInput
+    purchaseorder?: purchaseorderUncheckedCreateNestedManyWithoutCompanyInput
+    purchasequotation?: purchasequotationUncheckedCreateNestedManyWithoutCompanyInput
+    purchasereturn?: purchasereturnUncheckedCreateNestedManyWithoutCompanyInput
+    receipt?: receiptUncheckedCreateNestedManyWithoutCompanyInput
+    salesorder?: salesorderUncheckedCreateNestedManyWithoutCompanyInput
+    salesquotation?: salesquotationUncheckedCreateNestedManyWithoutCompanyInput
+    salesreturn?: salesreturnUncheckedCreateNestedManyWithoutCompanyInput
+    service?: serviceUncheckedCreateNestedManyWithoutCompanyInput
+    stocktransfer?: stocktransferUncheckedCreateNestedManyWithoutCompanyInput
+    transaction?: transactionUncheckedCreateNestedManyWithoutCompanyInput
+    uom?: uomUncheckedCreateNestedManyWithoutCompanyInput
+    user?: userUncheckedCreateNestedManyWithoutCompanyInput
+    vendor?: vendorUncheckedCreateNestedManyWithoutCompanyInput
+    warehouse?: warehouseUncheckedCreateNestedManyWithoutCompanyInput
+    voucher?: voucherUncheckedCreateNestedManyWithoutCompanyInput
+    role?: roleUncheckedCreateNestedManyWithoutCompanyInput
+    transaction_numbering?: transaction_numberingUncheckedCreateNestedManyWithoutCompanyInput
+    auditlog?: auditlogUncheckedCreateNestedManyWithoutCompanyInput
+    salesperson?: salespersonUncheckedCreateNestedManyWithoutCompanyInput
+    deliveryperson?: deliverypersonUncheckedCreateNestedManyWithoutCompanyInput
+    advanceadjustment?: advanceadjustmentUncheckedCreateNestedManyWithoutCompanyInput
+    company_user?: company_userUncheckedCreateNestedManyWithoutCompanyInput
+    company_smtp_settings?: company_smtp_settingsUncheckedCreateNestedOneWithoutCompanyInput
+  }
+
+  export type companyCreateOrConnectWithoutSubscriptionInput = {
+    where: companyWhereUniqueInput
+    create: XOR<companyCreateWithoutSubscriptionInput, companyUncheckedCreateWithoutSubscriptionInput>
+  }
+
+  export type planCreateWithoutSubscriptionInput = {
+    name: string
+    basePrice?: number
+    currency?: string
+    invoiceLimit?: string
+    additionalInvoicePrice?: number
+    userLimit?: string
+    storageCapacity?: string
+    billingCycle?: string
+    status?: string
+    modules?: string | null
+    totalPrice?: number
+    descriptions?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    company?: companyCreateNestedManyWithoutPlanInput
+    planrequest?: planrequestCreateNestedManyWithoutPlanInput
+  }
+
+  export type planUncheckedCreateWithoutSubscriptionInput = {
+    id?: number
+    name: string
+    basePrice?: number
+    currency?: string
+    invoiceLimit?: string
+    additionalInvoicePrice?: number
+    userLimit?: string
+    storageCapacity?: string
+    billingCycle?: string
+    status?: string
+    modules?: string | null
+    totalPrice?: number
+    descriptions?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    company?: companyUncheckedCreateNestedManyWithoutPlanInput
+    planrequest?: planrequestUncheckedCreateNestedManyWithoutPlanInput
+  }
+
+  export type planCreateOrConnectWithoutSubscriptionInput = {
+    where: planWhereUniqueInput
+    create: XOR<planCreateWithoutSubscriptionInput, planUncheckedCreateWithoutSubscriptionInput>
+  }
+
+  export type companyUpsertWithoutSubscriptionInput = {
+    update: XOR<companyUpdateWithoutSubscriptionInput, companyUncheckedUpdateWithoutSubscriptionInput>
+    create: XOR<companyCreateWithoutSubscriptionInput, companyUncheckedCreateWithoutSubscriptionInput>
+    where?: companyWhereInput
+  }
+
+  export type companyUpdateToOneWithWhereWithoutSubscriptionInput = {
+    where?: companyWhereInput
+    data: XOR<companyUpdateWithoutSubscriptionInput, companyUncheckedUpdateWithoutSubscriptionInput>
+  }
+
+  export type companyUpdateWithoutSubscriptionInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    logo?: NullableStringFieldUpdateOperationsInput | string | null
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    invoiceTemplate?: StringFieldUpdateOperationsInput | string
+    invoiceColor?: StringFieldUpdateOperationsInput | string
+    showQrCode?: BoolFieldUpdateOperationsInput | boolean
+    invoiceLogo?: NullableStringFieldUpdateOperationsInput | string | null
+    planName?: NullableStringFieldUpdateOperationsInput | string | null
+    planType?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    website?: NullableStringFieldUpdateOperationsInput | string | null
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    state?: NullableStringFieldUpdateOperationsInput | string | null
+    zip?: NullableStringFieldUpdateOperationsInput | string | null
+    country?: NullableStringFieldUpdateOperationsInput | string | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    originalCurrency?: NullableStringFieldUpdateOperationsInput | string | null
+    bankName?: NullableStringFieldUpdateOperationsInput | string | null
+    accountHolder?: NullableStringFieldUpdateOperationsInput | string | null
+    accountName?: NullableStringFieldUpdateOperationsInput | string | null
+    accountNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    iban?: NullableStringFieldUpdateOperationsInput | string | null
+    bic?: NullableStringFieldUpdateOperationsInput | string | null
+    sortCode?: NullableStringFieldUpdateOperationsInput | string | null
+    ifsc?: NullableStringFieldUpdateOperationsInput | string | null
+    vatNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    defaultVatRate?: NullableStringFieldUpdateOperationsInput | string | null
+    gstNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    defaultVatRateId?: NullableIntFieldUpdateOperationsInput | number | null
+    isVatRegistered?: BoolFieldUpdateOperationsInput | boolean
+    terms?: NullableStringFieldUpdateOperationsInput | string | null
+    termsInvoice?: NullableStringFieldUpdateOperationsInput | string | null
+    termsReceipt?: NullableStringFieldUpdateOperationsInput | string | null
+    termsPurchase?: NullableStringFieldUpdateOperationsInput | string | null
+    termsSalesOrder?: NullableStringFieldUpdateOperationsInput | string | null
+    termsQuotation?: NullableStringFieldUpdateOperationsInput | string | null
+    termsCreditNote?: NullableStringFieldUpdateOperationsInput | string | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    inventoryConfig?: NullableStringFieldUpdateOperationsInput | string | null
+    invoiceTableHeaders?: NullableStringFieldUpdateOperationsInput | string | null
+    invoiceLabels?: NullableStringFieldUpdateOperationsInput | string | null
+    receiptTemplate?: NullableStringFieldUpdateOperationsInput | string | null
+    receiptColor?: NullableStringFieldUpdateOperationsInput | string | null
+    receiptLabels?: NullableStringFieldUpdateOperationsInput | string | null
+    receiptTableHeaders?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentTemplate?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentColor?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentLabels?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentTableHeaders?: NullableStringFieldUpdateOperationsInput | string | null
+    customFieldsConfig?: NullableStringFieldUpdateOperationsInput | string | null
+    documentTitles?: NullableStringFieldUpdateOperationsInput | string | null
+    invoiceDeletionPassword?: NullableStringFieldUpdateOperationsInput | string | null
+    accountgroup?: accountgroupUpdateManyWithoutCompanyNestedInput
+    accountsubgroup?: accountsubgroupUpdateManyWithoutCompanyNestedInput
+    bankaccount?: bankaccountUpdateManyWithoutCompanyNestedInput
+    banktransaction?: banktransactionUpdateManyWithoutCompanyNestedInput
+    category?: categoryUpdateManyWithoutCompanyNestedInput
+    plan?: planUpdateOneWithoutCompanyNestedInput
+    customer?: customerUpdateManyWithoutCompanyNestedInput
+    deliverychallan?: deliverychallanUpdateManyWithoutCompanyNestedInput
+    expenseentry?: expenseentryUpdateManyWithoutCompanyNestedInput
+    goodsreceiptnote?: goodsreceiptnoteUpdateManyWithoutCompanyNestedInput
+    incomeentry?: incomeentryUpdateManyWithoutCompanyNestedInput
+    inventoryadjustment?: inventoryadjustmentUpdateManyWithoutCompanyNestedInput
+    inventorytransaction?: inventorytransactionUpdateManyWithoutCompanyNestedInput
+    invoice?: invoiceUpdateManyWithoutCompanyNestedInput
+    journalentry?: journalentryUpdateManyWithoutCompanyNestedInput
+    ledger?: ledgerUpdateManyWithoutCompanyNestedInput
+    passwordrequest?: passwordrequestUpdateManyWithoutCompanyNestedInput
+    payment?: paymentUpdateManyWithoutCompanyNestedInput
+    posinvoice?: posinvoiceUpdateManyWithoutCompanyNestedInput
+    product?: productUpdateManyWithoutCompanyNestedInput
+    purchasebill?: purchasebillUpdateManyWithoutCompanyNestedInput
+    purchaseorder?: purchaseorderUpdateManyWithoutCompanyNestedInput
+    purchasequotation?: purchasequotationUpdateManyWithoutCompanyNestedInput
+    purchasereturn?: purchasereturnUpdateManyWithoutCompanyNestedInput
+    receipt?: receiptUpdateManyWithoutCompanyNestedInput
+    salesorder?: salesorderUpdateManyWithoutCompanyNestedInput
+    salesquotation?: salesquotationUpdateManyWithoutCompanyNestedInput
+    salesreturn?: salesreturnUpdateManyWithoutCompanyNestedInput
+    service?: serviceUpdateManyWithoutCompanyNestedInput
+    stocktransfer?: stocktransferUpdateManyWithoutCompanyNestedInput
+    transaction?: transactionUpdateManyWithoutCompanyNestedInput
+    uom?: uomUpdateManyWithoutCompanyNestedInput
+    user?: userUpdateManyWithoutCompanyNestedInput
+    vendor?: vendorUpdateManyWithoutCompanyNestedInput
+    warehouse?: warehouseUpdateManyWithoutCompanyNestedInput
+    voucher?: voucherUpdateManyWithoutCompanyNestedInput
+    role?: roleUpdateManyWithoutCompanyNestedInput
+    transaction_numbering?: transaction_numberingUpdateManyWithoutCompanyNestedInput
+    auditlog?: auditlogUpdateManyWithoutCompanyNestedInput
+    salesperson?: salespersonUpdateManyWithoutCompanyNestedInput
+    deliveryperson?: deliverypersonUpdateManyWithoutCompanyNestedInput
+    advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
+    company_user?: company_userUpdateManyWithoutCompanyNestedInput
+    company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+  }
+
+  export type companyUncheckedUpdateWithoutSubscriptionInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    logo?: NullableStringFieldUpdateOperationsInput | string | null
+    startDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    invoiceTemplate?: StringFieldUpdateOperationsInput | string
+    invoiceColor?: StringFieldUpdateOperationsInput | string
+    showQrCode?: BoolFieldUpdateOperationsInput | boolean
+    invoiceLogo?: NullableStringFieldUpdateOperationsInput | string | null
+    planName?: NullableStringFieldUpdateOperationsInput | string | null
+    planId?: NullableIntFieldUpdateOperationsInput | number | null
+    planType?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    website?: NullableStringFieldUpdateOperationsInput | string | null
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    state?: NullableStringFieldUpdateOperationsInput | string | null
+    zip?: NullableStringFieldUpdateOperationsInput | string | null
+    country?: NullableStringFieldUpdateOperationsInput | string | null
+    currency?: NullableStringFieldUpdateOperationsInput | string | null
+    originalCurrency?: NullableStringFieldUpdateOperationsInput | string | null
+    bankName?: NullableStringFieldUpdateOperationsInput | string | null
+    accountHolder?: NullableStringFieldUpdateOperationsInput | string | null
+    accountName?: NullableStringFieldUpdateOperationsInput | string | null
+    accountNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    iban?: NullableStringFieldUpdateOperationsInput | string | null
+    bic?: NullableStringFieldUpdateOperationsInput | string | null
+    sortCode?: NullableStringFieldUpdateOperationsInput | string | null
+    ifsc?: NullableStringFieldUpdateOperationsInput | string | null
+    vatNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    defaultVatRate?: NullableStringFieldUpdateOperationsInput | string | null
+    gstNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    defaultVatRateId?: NullableIntFieldUpdateOperationsInput | number | null
+    isVatRegistered?: BoolFieldUpdateOperationsInput | boolean
+    terms?: NullableStringFieldUpdateOperationsInput | string | null
+    termsInvoice?: NullableStringFieldUpdateOperationsInput | string | null
+    termsReceipt?: NullableStringFieldUpdateOperationsInput | string | null
+    termsPurchase?: NullableStringFieldUpdateOperationsInput | string | null
+    termsSalesOrder?: NullableStringFieldUpdateOperationsInput | string | null
+    termsQuotation?: NullableStringFieldUpdateOperationsInput | string | null
+    termsCreditNote?: NullableStringFieldUpdateOperationsInput | string | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    inventoryConfig?: NullableStringFieldUpdateOperationsInput | string | null
+    invoiceTableHeaders?: NullableStringFieldUpdateOperationsInput | string | null
+    invoiceLabels?: NullableStringFieldUpdateOperationsInput | string | null
+    receiptTemplate?: NullableStringFieldUpdateOperationsInput | string | null
+    receiptColor?: NullableStringFieldUpdateOperationsInput | string | null
+    receiptLabels?: NullableStringFieldUpdateOperationsInput | string | null
+    receiptTableHeaders?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentTemplate?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentColor?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentLabels?: NullableStringFieldUpdateOperationsInput | string | null
+    paymentTableHeaders?: NullableStringFieldUpdateOperationsInput | string | null
+    customFieldsConfig?: NullableStringFieldUpdateOperationsInput | string | null
+    documentTitles?: NullableStringFieldUpdateOperationsInput | string | null
+    invoiceDeletionPassword?: NullableStringFieldUpdateOperationsInput | string | null
+    accountgroup?: accountgroupUncheckedUpdateManyWithoutCompanyNestedInput
+    accountsubgroup?: accountsubgroupUncheckedUpdateManyWithoutCompanyNestedInput
+    bankaccount?: bankaccountUncheckedUpdateManyWithoutCompanyNestedInput
+    banktransaction?: banktransactionUncheckedUpdateManyWithoutCompanyNestedInput
+    category?: categoryUncheckedUpdateManyWithoutCompanyNestedInput
+    customer?: customerUncheckedUpdateManyWithoutCompanyNestedInput
+    deliverychallan?: deliverychallanUncheckedUpdateManyWithoutCompanyNestedInput
+    expenseentry?: expenseentryUncheckedUpdateManyWithoutCompanyNestedInput
+    goodsreceiptnote?: goodsreceiptnoteUncheckedUpdateManyWithoutCompanyNestedInput
+    incomeentry?: incomeentryUncheckedUpdateManyWithoutCompanyNestedInput
+    inventoryadjustment?: inventoryadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
+    inventorytransaction?: inventorytransactionUncheckedUpdateManyWithoutCompanyNestedInput
+    invoice?: invoiceUncheckedUpdateManyWithoutCompanyNestedInput
+    journalentry?: journalentryUncheckedUpdateManyWithoutCompanyNestedInput
+    ledger?: ledgerUncheckedUpdateManyWithoutCompanyNestedInput
+    passwordrequest?: passwordrequestUncheckedUpdateManyWithoutCompanyNestedInput
+    payment?: paymentUncheckedUpdateManyWithoutCompanyNestedInput
+    posinvoice?: posinvoiceUncheckedUpdateManyWithoutCompanyNestedInput
+    product?: productUncheckedUpdateManyWithoutCompanyNestedInput
+    purchasebill?: purchasebillUncheckedUpdateManyWithoutCompanyNestedInput
+    purchaseorder?: purchaseorderUncheckedUpdateManyWithoutCompanyNestedInput
+    purchasequotation?: purchasequotationUncheckedUpdateManyWithoutCompanyNestedInput
+    purchasereturn?: purchasereturnUncheckedUpdateManyWithoutCompanyNestedInput
+    receipt?: receiptUncheckedUpdateManyWithoutCompanyNestedInput
+    salesorder?: salesorderUncheckedUpdateManyWithoutCompanyNestedInput
+    salesquotation?: salesquotationUncheckedUpdateManyWithoutCompanyNestedInput
+    salesreturn?: salesreturnUncheckedUpdateManyWithoutCompanyNestedInput
+    service?: serviceUncheckedUpdateManyWithoutCompanyNestedInput
+    stocktransfer?: stocktransferUncheckedUpdateManyWithoutCompanyNestedInput
+    transaction?: transactionUncheckedUpdateManyWithoutCompanyNestedInput
+    uom?: uomUncheckedUpdateManyWithoutCompanyNestedInput
+    user?: userUncheckedUpdateManyWithoutCompanyNestedInput
+    vendor?: vendorUncheckedUpdateManyWithoutCompanyNestedInput
+    warehouse?: warehouseUncheckedUpdateManyWithoutCompanyNestedInput
+    voucher?: voucherUncheckedUpdateManyWithoutCompanyNestedInput
+    role?: roleUncheckedUpdateManyWithoutCompanyNestedInput
+    transaction_numbering?: transaction_numberingUncheckedUpdateManyWithoutCompanyNestedInput
+    auditlog?: auditlogUncheckedUpdateManyWithoutCompanyNestedInput
+    salesperson?: salespersonUncheckedUpdateManyWithoutCompanyNestedInput
+    deliveryperson?: deliverypersonUncheckedUpdateManyWithoutCompanyNestedInput
+    advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
+    company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
+    company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+  }
+
+  export type planUpsertWithoutSubscriptionInput = {
+    update: XOR<planUpdateWithoutSubscriptionInput, planUncheckedUpdateWithoutSubscriptionInput>
+    create: XOR<planCreateWithoutSubscriptionInput, planUncheckedCreateWithoutSubscriptionInput>
+    where?: planWhereInput
+  }
+
+  export type planUpdateToOneWithWhereWithoutSubscriptionInput = {
+    where?: planWhereInput
+    data: XOR<planUpdateWithoutSubscriptionInput, planUncheckedUpdateWithoutSubscriptionInput>
+  }
+
+  export type planUpdateWithoutSubscriptionInput = {
+    name?: StringFieldUpdateOperationsInput | string
+    basePrice?: FloatFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    invoiceLimit?: StringFieldUpdateOperationsInput | string
+    additionalInvoicePrice?: FloatFieldUpdateOperationsInput | number
+    userLimit?: StringFieldUpdateOperationsInput | string
+    storageCapacity?: StringFieldUpdateOperationsInput | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    modules?: NullableStringFieldUpdateOperationsInput | string | null
+    totalPrice?: FloatFieldUpdateOperationsInput | number
+    descriptions?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    company?: companyUpdateManyWithoutPlanNestedInput
+    planrequest?: planrequestUpdateManyWithoutPlanNestedInput
+  }
+
+  export type planUncheckedUpdateWithoutSubscriptionInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    name?: StringFieldUpdateOperationsInput | string
+    basePrice?: FloatFieldUpdateOperationsInput | number
+    currency?: StringFieldUpdateOperationsInput | string
+    invoiceLimit?: StringFieldUpdateOperationsInput | string
+    additionalInvoicePrice?: FloatFieldUpdateOperationsInput | number
+    userLimit?: StringFieldUpdateOperationsInput | string
+    storageCapacity?: StringFieldUpdateOperationsInput | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    modules?: NullableStringFieldUpdateOperationsInput | string | null
+    totalPrice?: FloatFieldUpdateOperationsInput | number
+    descriptions?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    company?: companyUncheckedUpdateManyWithoutPlanNestedInput
+    planrequest?: planrequestUncheckedUpdateManyWithoutPlanNestedInput
   }
 
   export type accountsubgroupCreateManyAccountgroupInput = {
@@ -179604,6 +181985,19 @@ export namespace Prisma {
     userId: number
     role?: string
     roleId?: number | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type subscriptionCreateManyCompanyInput = {
+    id?: number
+    planId?: number | null
+    startDate?: Date | string
+    expiryDate: Date | string
+    billingCycle?: string
+    amount?: number
+    status?: string
+    paymentReference?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -182142,6 +184536,44 @@ export namespace Prisma {
     userId?: IntFieldUpdateOperationsInput | number
     role?: StringFieldUpdateOperationsInput | string
     roleId?: NullableIntFieldUpdateOperationsInput | number | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type subscriptionUpdateWithoutCompanyInput = {
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiryDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    plan?: planUpdateOneWithoutSubscriptionNestedInput
+  }
+
+  export type subscriptionUncheckedUpdateWithoutCompanyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    planId?: NullableIntFieldUpdateOperationsInput | number | null
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiryDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type subscriptionUncheckedUpdateManyWithoutCompanyInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    planId?: NullableIntFieldUpdateOperationsInput | number | null
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiryDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -185436,6 +187868,19 @@ export namespace Prisma {
     updatedAt?: Date | string
   }
 
+  export type subscriptionCreateManyPlanInput = {
+    id?: number
+    companyId: number
+    startDate?: Date | string
+    expiryDate: Date | string
+    billingCycle?: string
+    amount?: number
+    status?: string
+    paymentReference?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
   export type companyUpdateWithoutPlanInput = {
     name?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
@@ -185537,6 +187982,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateWithoutPlanInput = {
@@ -185641,6 +188087,7 @@ export namespace Prisma {
     advanceadjustment?: advanceadjustmentUncheckedUpdateManyWithoutCompanyNestedInput
     company_user?: company_userUncheckedUpdateManyWithoutCompanyNestedInput
     company_smtp_settings?: company_smtp_settingsUncheckedUpdateOneWithoutCompanyNestedInput
+    subscription?: subscriptionUncheckedUpdateManyWithoutCompanyNestedInput
   }
 
   export type companyUncheckedUpdateManyWithoutPlanInput = {
@@ -185744,6 +188191,44 @@ export namespace Prisma {
     billingCycle?: StringFieldUpdateOperationsInput | string
     startDate?: DateTimeFieldUpdateOperationsInput | Date | string
     status?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type subscriptionUpdateWithoutPlanInput = {
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiryDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    company?: companyUpdateOneRequiredWithoutSubscriptionNestedInput
+  }
+
+  export type subscriptionUncheckedUpdateWithoutPlanInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    companyId?: IntFieldUpdateOperationsInput | number
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiryDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type subscriptionUncheckedUpdateManyWithoutPlanInput = {
+    id?: IntFieldUpdateOperationsInput | number
+    companyId?: IntFieldUpdateOperationsInput | number
+    startDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    expiryDate?: DateTimeFieldUpdateOperationsInput | Date | string
+    billingCycle?: StringFieldUpdateOperationsInput | string
+    amount?: FloatFieldUpdateOperationsInput | number
+    status?: StringFieldUpdateOperationsInput | string
+    paymentReference?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -192608,6 +195093,10 @@ export namespace Prisma {
      * @deprecated Use integration_logDefaultArgs instead
      */
     export type integration_logArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = integration_logDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use subscriptionDefaultArgs instead
+     */
+    export type subscriptionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = subscriptionDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany
