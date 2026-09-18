@@ -17,6 +17,7 @@ const companyRoutes = require('./src/routes/companyRoutes');
 const planRoutes = require('./src/routes/planRoutes');
 const planRequestRoutes = require('./src/routes/planRequestRoutes');
 const paymentRoutes = require('./src/routes/paymentRoutes');
+const paymentRecordRoutes = require('./src/routes/paymentRecordRoutes');
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
 const profileRoutes = require('./src/routes/profileRoutes');
 const chartOfAccountsRoutes = require('./src/routes/chartOfAccountsRoutes');
@@ -165,7 +166,15 @@ app.use('/api/companies', companyRoutes);
 app.use('/api/company', companyRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/plan-requests', planRequestRoutes);
-app.use('/api/payments', paymentRoutes);
+app.use('/api/superadmin/payments', paymentRecordRoutes);
+app.use('/api/payments', (req, res, next) => {
+    // If request contains purchase bill / vendor context, delegate to purchase paymentRoutes
+    if (req.body?.vendorId || req.query?.vendorId || req.body?.purchaseBillId || req.query?.purchaseBillId) {
+        return paymentRoutes(req, res, next);
+    }
+    // Otherwise handle as Super Admin SaaS payment records
+    return paymentRecordRoutes(req, res, next);
+});
 app.use('/api/superadmin/dashboard', dashboardRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/chart-of-accounts', chartOfAccountsRoutes);

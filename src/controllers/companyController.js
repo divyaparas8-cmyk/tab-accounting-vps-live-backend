@@ -4,6 +4,50 @@ const chartOfAccountsService = require('../services/chartOfAccountsService');
 const numberingService = require('../services/numberingService');
 const { isCloudinaryConfigured, uploadToCloudinaryOrBase64 } = require('../utils/cloudinaryConfig');
 
+const deriveCompanyPermissions = (modulesData) => {
+    let modulesArray = [];
+    try {
+        if (typeof modulesData === 'string') {
+            modulesArray = JSON.parse(modulesData);
+        } else if (Array.isArray(modulesData)) {
+            modulesArray = modulesData;
+        }
+    } catch (e) {
+        console.error("Module parse error:", e);
+    }
+
+    const enabledModules = modulesArray.filter(m => m.enabled).map(m => (m.name || m.module_name || "").toLowerCase());
+
+    let defaultPermissions = [
+        "show dashboard",
+        "manage voucher", "create voucher", "edit voucher", "delete voucher",
+        "manage reports", "view reports",
+        "manage user", "create user", "edit user", "delete user",
+        "manage role", "create role", "edit role", "delete role",
+        "manage settings", "edit settings", "view settings"
+    ];
+
+    const moduleMapping = {
+        'account': ["manage accounts", "create accounts", "edit accounts", "delete accounts", "view accounts"],
+        'accounts': ["manage accounts", "create accounts", "edit accounts", "delete accounts", "view accounts"],
+        'inventory': ["manage inventory", "create inventory", "edit inventory", "delete inventory", "view inventory"],
+        'sales': ["manage sales", "create sales", "edit sales", "delete sales", "show sales", "send sales", "view sales"],
+        'purchase': ["manage purchases", "create purchases", "edit purchases", "delete purchases", "view purchases"],
+        'purchases': ["manage purchases", "create purchases", "edit purchases", "delete purchases", "view purchases"],
+        'pos': ["manage pos", "create pos", "edit pos", "delete pos", "view pos"]
+    };
+
+    enabledModules.forEach(modName => {
+        for (const key in moduleMapping) {
+            if (modName.includes(key)) {
+                defaultPermissions = [...new Set([...defaultPermissions, ...moduleMapping[key]])];
+            }
+        }
+    });
+
+    return defaultPermissions;
+};
+
 const createCompany = async (req, res) => {
     try {
         const { name, email, phone, address, startDate, endDate, planId, planType, password, currency } = req.body;
@@ -34,7 +78,26 @@ const createCompany = async (req, res) => {
             hashedPassword = await bcrypt.hash(password, 10);
         }
 
-        // Create Company and Admin User / Association in a transaction
+        // Fetch plan if planId provided to sync planName, dates, modules & pricing
+        let selectedPlan = null;
+        if (planId) {
+            selectedPlan = await prisma.plan.findUnique({ where: { id: parseInt(planId) } });
+        }
+
+        const start = startDate ? new Date(startDate) : new Date();
+        let end = endDate ? new Date(endDate) : null;
+        const effectivePlanType = planType || selectedPlan?.billingCycle || 'Monthly';
+
+        if (!end && selectedPlan) {
+            end = new Date(start);
+            if (effectivePlanType === 'Yearly') {
+                end.setFullYear(end.getFullYear() + 1);
+            } else {
+                end.setMonth(end.getMonth() + 1);
+            }
+        }
+
+        // Create Company, Payment Record and Admin User in a transaction
         const result = await prisma.$transaction(async (tx) => {
             const company = await tx.company.create({
                 data: {
@@ -42,59 +105,19 @@ const createCompany = async (req, res) => {
                     email: normalizedEmail,
                     phone,
                     address,
-                    startDate: startDate ? new Date(startDate) : null,
-                    endDate: endDate ? new Date(endDate) : null,
-                    planId: planId ? parseInt(planId) : null,
-                    planType,
+                    startDate: start,
+                    endDate: end,
+                    planId: selectedPlan ? selectedPlan.id : (planId ? parseInt(planId) : null),
+                    planName: selectedPlan ? selectedPlan.name : null,
+                    planType: effectivePlanType,
                     logo: logoUrl,
-                    currency: currency || 'EUR',
-                    originalCurrency: currency || 'EUR'
+                    currency: currency || selectedPlan?.currency || 'EUR',
+                    originalCurrency: currency || selectedPlan?.currency || 'EUR'
                 }
             });
 
             // Derive permissions from Plan Modules
-            let modulesArray = [];
-            try {
-                if (planId) {
-                    const plan = await tx.plan.findUnique({ where: { id: parseInt(planId) } });
-                    if (plan && plan.modules) {
-                        modulesArray = JSON.parse(plan.modules);
-                    }
-                }
-            } catch (e) {
-                console.error("Module parse error:", e);
-            }
-
-            const enabledModules = modulesArray.filter(m => m.enabled).map(m => (m.name || m.module_name || "").toLowerCase());
-
-            // Base permissions (always included for company admin - requested default menus)
-            let defaultPermissions = [
-                "show dashboard",
-                "manage voucher", "create voucher", "edit voucher", "delete voucher",
-                "manage reports", "view reports",
-                "manage user", "create user", "edit user", "delete user",
-                "manage role", "create role", "edit role", "delete role",
-                "manage settings", "edit settings", "view settings"
-            ];
-
-            // Module specific mapping (gated menus)
-            const moduleMapping = {
-                'account': ["manage accounts", "create accounts", "edit accounts", "delete accounts", "view accounts"],
-                'accounts': ["manage accounts", "create accounts", "edit accounts", "delete accounts", "view accounts"],
-                'inventory': ["manage inventory", "create inventory", "edit inventory", "delete inventory", "view inventory"],
-                'sales': ["manage sales", "create sales", "edit sales", "delete sales", "show sales", "send sales", "view sales"],
-                'purchase': ["manage purchases", "create purchases", "edit purchases", "delete purchases", "view purchases"],
-                'purchases': ["manage purchases", "create purchases", "edit purchases", "delete purchases", "view purchases"],
-                'pos': ["manage pos", "create pos", "edit pos", "delete pos", "view pos"]
-            };
-
-            enabledModules.forEach(modName => {
-                for (const key in moduleMapping) {
-                    if (modName.includes(key)) {
-                        defaultPermissions = [...new Set([...defaultPermissions, ...moduleMapping[key]])];
-                    }
-                }
-            });
+            const defaultPermissions = deriveCompanyPermissions(selectedPlan?.modules || []);
 
             const role = await tx.role.create({
                 data: {
@@ -103,6 +126,21 @@ const createCompany = async (req, res) => {
                     permissions: JSON.stringify(defaultPermissions)
                 }
             });
+
+            // Record SaaS subscription payment
+            if (selectedPlan) {
+                const planAmount = parseFloat(selectedPlan.totalPrice) || parseFloat(selectedPlan.basePrice) || 0;
+                await tx.paymentrecord.create({
+                    data: {
+                        transactionId: `TXN${Math.floor(100000000 + Math.random() * 900000000)}`,
+                        date: new Date(),
+                        customer: company.name,
+                        paymentMethod: 'Subscription',
+                        amount: planAmount,
+                        status: 'Success'
+                    }
+                });
+            }
 
             let finalUser = existingUser;
 
@@ -359,6 +397,11 @@ const updateCompany = async (req, res) => {
             return str.replace(/[\u0600-\u06FF]/g, '').replace(/\s+/g, ' ').trim();
         };
 
+        let targetPlan = null;
+        if (planId) {
+            targetPlan = await prisma.plan.findUnique({ where: { id: parseInt(planId) } });
+        }
+
         const updateData = {
             name,
             email,
@@ -373,7 +416,8 @@ const updateCompany = async (req, res) => {
             originalCurrency: currency || currentCompany.currency || 'EUR',
             startDate: startDate ? new Date(startDate) : undefined,
             endDate: endDate ? new Date(endDate) : undefined,
-            planId: planId ? parseInt(planId) : undefined,
+            planId: targetPlan ? targetPlan.id : (planId ? parseInt(planId) : undefined),
+            planName: targetPlan ? targetPlan.name : undefined,
             planType: planType || undefined,
             invoiceTemplate,
             invoiceColor,
@@ -432,6 +476,36 @@ const updateCompany = async (req, res) => {
 
         logToFile(`✅ Company updated in DB. company.invoiceLabels value: ${company.invoiceLabels}`);
 
+        // If plan changed / upgraded, record payment record and synchronize role permissions
+        if (targetPlan && currentCompany.planId !== targetPlan.id) {
+            try {
+                const planAmount = parseFloat(targetPlan.totalPrice) || parseFloat(targetPlan.basePrice) || 0;
+                await prisma.paymentrecord.create({
+                    data: {
+                        transactionId: `TXN${Math.floor(100000000 + Math.random() * 900000000)}`,
+                        date: new Date(),
+                        customer: company.name,
+                        paymentMethod: 'Subscription Upgrade',
+                        amount: planAmount,
+                        status: 'Success'
+                    }
+                });
+
+                const newPerms = deriveCompanyPermissions(targetPlan.modules || []);
+                await prisma.role.updateMany({
+                    where: {
+                        companyId: company.id,
+                        name: 'COMPANY'
+                    },
+                    data: {
+                        permissions: JSON.stringify(newPerms)
+                    }
+                });
+            } catch (syncErr) {
+                console.error('Error recording upgrade payment / syncing permissions:', syncErr);
+            }
+        }
+
         if (defaultVatRate !== undefined) {
             try {
                 await prisma.$executeRawUnsafe('UPDATE company SET defaultVatRate = ? WHERE id = ?', defaultVatRate.toString(), parseInt(req.params.id));
@@ -453,10 +527,12 @@ const updateCompany = async (req, res) => {
 
 const deleteCompany = async (req, res) => {
     try {
-        // Transaction to delete company and its users
+        const companyId = parseInt(req.params.id);
+        // Transaction to delete company, company_users, and its users
         await prisma.$transaction(async (tx) => {
-            await tx.user.deleteMany({ where: { companyId: parseInt(req.params.id) } });
-            await tx.company.delete({ where: { id: parseInt(req.params.id) } });
+            await tx.company_user.deleteMany({ where: { companyId } });
+            await tx.user.deleteMany({ where: { companyId } });
+            await tx.company.delete({ where: { id: companyId } });
         });
         res.json({ message: 'Company and its users deleted successfully' });
     } catch (error) {

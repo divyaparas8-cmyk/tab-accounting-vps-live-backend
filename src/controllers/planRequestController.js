@@ -134,6 +134,50 @@ const deletePlanRequest = async (req, res) => {
     }
 };
 
+const deriveCompanyPermissions = (modulesData) => {
+    let modulesArray = [];
+    try {
+        if (typeof modulesData === 'string') {
+            modulesArray = JSON.parse(modulesData);
+        } else if (Array.isArray(modulesData)) {
+            modulesArray = modulesData;
+        }
+    } catch (e) {
+        console.error("Module parse error:", e);
+    }
+
+    const enabledModules = modulesArray.filter(m => m.enabled).map(m => (m.name || m.module_name || "").toLowerCase());
+
+    let defaultPermissions = [
+        "show dashboard",
+        "manage voucher", "create voucher", "edit voucher", "delete voucher",
+        "manage reports", "view reports",
+        "manage user", "create user", "edit user", "delete user",
+        "manage role", "create role", "edit role", "delete role",
+        "manage settings", "edit settings", "view settings"
+    ];
+
+    const moduleMapping = {
+        'account': ["manage accounts", "create accounts", "edit accounts", "delete accounts", "view accounts"],
+        'accounts': ["manage accounts", "create accounts", "edit accounts", "delete accounts", "view accounts"],
+        'inventory': ["manage inventory", "create inventory", "edit inventory", "delete inventory", "view inventory"],
+        'sales': ["manage sales", "create sales", "edit sales", "delete sales", "show sales", "send sales", "view sales"],
+        'purchase': ["manage purchases", "create purchases", "edit purchases", "delete purchases", "view purchases"],
+        'purchases': ["manage purchases", "create purchases", "edit purchases", "delete purchases", "view purchases"],
+        'pos': ["manage pos", "create pos", "edit pos", "delete pos", "view pos"]
+    };
+
+    enabledModules.forEach(modName => {
+        for (const key in moduleMapping) {
+            if (modName.includes(key)) {
+                defaultPermissions = [...new Set([...defaultPermissions, ...moduleMapping[key]])];
+            }
+        }
+    });
+
+    return defaultPermissions;
+};
+
 const approvePlanRequest = async (req, res) => {
     try {
         const requestId = parseInt(req.params.id);
@@ -152,9 +196,20 @@ const approvePlanRequest = async (req, res) => {
             return res.status(400).json({ error: 'Plan request already accepted' });
         }
 
+        const start = new Date(planRequest.startDate || new Date());
+        let end = new Date(start);
+        if (planRequest.billingCycle === 'Yearly') {
+            end.setFullYear(end.getFullYear() + 1);
+        } else {
+            end.setMonth(end.getMonth() + 1);
+        }
+
+        const planName = planRequest.planName || planRequest.plan?.name || null;
+        const planAmount = parseFloat(planRequest.plan?.totalPrice || planRequest.plan?.basePrice || 0);
+
         // 2. Check if company or user already exists
         const email = planRequest.email.toLowerCase();
-        const existingCompany = await prisma.company.findUnique({ where: { email } });
+        const existingCompany = await prisma.company.findFirst({ where: { email } });
         const existingUser = await prisma.user.findUnique({ where: { email } });
 
         if (existingCompany || existingUser) {
@@ -168,30 +223,60 @@ const approvePlanRequest = async (req, res) => {
                     });
                 }
             }
+
+            let updatedCompany = existingCompany;
+            if (existingCompany) {
+                updatedCompany = await prisma.company.update({
+                    where: { id: existingCompany.id },
+                    data: {
+                        planId: planRequest.planId,
+                        planName: planName,
+                        planType: planRequest.billingCycle,
+                        startDate: start,
+                        endDate: end
+                    }
+                });
+
+                // Update default COMPANY role permissions
+                if (planRequest.plan?.modules) {
+                    const defaultPermissions = deriveCompanyPermissions(planRequest.plan.modules);
+                    await prisma.role.updateMany({
+                        where: { companyId: existingCompany.id, name: 'COMPANY' },
+                        data: { permissions: JSON.stringify(defaultPermissions) }
+                    });
+                }
+
+                // Record payment in paymentrecord
+                await prisma.paymentrecord.create({
+                    data: {
+                        transactionId: `TXN${Math.floor(100000000 + Math.random() * 900000000)}`,
+                        date: new Date(),
+                        customer: existingCompany.name,
+                        paymentMethod: 'Subscription Request',
+                        amount: planAmount,
+                        status: 'Success'
+                    }
+                });
+            }
+
             const updatedRequest = await prisma.planrequest.update({
                 where: { id: requestId },
                 data: { status: 'Accepted' }
             });
+
             return res.json({
-                message: 'Plan request accepted, and password updated for existing account.',
-                planRequest: updatedRequest
+                message: 'Plan request accepted and company subscription updated successfully.',
+                planRequest: updatedRequest,
+                company: updatedCompany
             });
         }
 
-        // 3. Prepare data outside transaction
+        // 3. Prepare data outside transaction for new company
         const { password } = req.body;
         if (!password) {
             return res.status(400).json({ error: 'Password is required to approve and create an account' });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        const start = new Date(planRequest.startDate);
-        let end = new Date(start);
-        if (planRequest.billingCycle === 'Yearly') {
-            end.setFullYear(end.getFullYear() + 1);
-        } else {
-            end.setMonth(end.getMonth() + 1);
-        }
 
         // 4. Run transaction
         const result = await prisma.$transaction(async (tx) => {
@@ -206,6 +291,7 @@ const approvePlanRequest = async (req, res) => {
                     startDate: start,
                     endDate: end,
                     planId: planRequest.planId,
+                    planName: planName,
                     planType: planRequest.billingCycle,
                     currency: planRequest.plan?.currency || 'EUR',
                     originalCurrency: planRequest.plan?.currency || 'EUR'
@@ -213,46 +299,7 @@ const approvePlanRequest = async (req, res) => {
             });
 
             // Derive permissions from Plan Modules
-            let modulesArray = [];
-            try {
-                if (planRequest.plan && planRequest.plan.modules) {
-                    modulesArray = JSON.parse(planRequest.plan.modules);
-                }
-            } catch (e) {
-                console.error("Module parse error:", e);
-            }
-
-            const enabledModules = modulesArray.filter(m => m.enabled).map(m => (m.name || m.module_name || "").toLowerCase());
-
-            // Base permissions (always included for company admin - requested default menus)
-            let defaultPermissions = [
-                "show dashboard",
-                "manage voucher", "create voucher", "edit voucher", "delete voucher",
-                "manage reports", "view reports",
-                "manage user", "create user", "edit user", "delete user",
-                "manage role", "create role", "edit role", "delete role",
-                "manage settings", "edit settings", "view settings"
-            ];
-
-            // Module specific mapping (gated menus)
-            const moduleMapping = {
-                'account': ["manage accounts", "create accounts", "edit accounts", "delete accounts"],
-                'accounts': ["manage accounts", "create accounts", "edit accounts", "delete accounts"],
-                'inventory': ["manage inventory", "create inventory", "edit inventory", "delete inventory"],
-                'sales': ["manage sales", "create sales", "edit sales", "delete sales", "show sales", "send sales"],
-                'purchase': ["manage purchases", "create purchases", "edit purchases", "delete purchases"],
-                'purchases': ["manage purchases", "create purchases", "edit purchases", "delete purchases"],
-                'pos': ["manage pos", "create pos", "edit pos", "delete pos"]
-            };
-
-            enabledModules.forEach(modName => {
-                // Check direct match or loose match
-                for (const key in moduleMapping) {
-                    if (modName.includes(key)) {
-                        defaultPermissions = [...new Set([...defaultPermissions, ...moduleMapping[key]])];
-                    }
-                }
-            });
+            const defaultPermissions = deriveCompanyPermissions(planRequest.plan?.modules || []);
 
             const role = await tx.role.create({
                 data: {
@@ -269,8 +316,30 @@ const approvePlanRequest = async (req, res) => {
                     email: email,
                     password: hashedPassword,
                     role: 'COMPANY',
-                    roleId: role.id, // Link to the COMPANY role
+                    roleId: role.id,
                     companyId: company.id
+                }
+            });
+
+            // Create company_user junction record
+            await tx.company_user.create({
+                data: {
+                    userId: user.id,
+                    companyId: company.id,
+                    role: 'COMPANY',
+                    roleId: role.id
+                }
+            });
+
+            // Record SaaS subscription payment in paymentrecord
+            await tx.paymentrecord.create({
+                data: {
+                    transactionId: `TXN${Math.floor(100000000 + Math.random() * 900000000)}`,
+                    date: new Date(),
+                    customer: company.name,
+                    paymentMethod: 'Subscription Request',
+                    amount: planAmount,
+                    status: 'Success'
                 }
             });
 

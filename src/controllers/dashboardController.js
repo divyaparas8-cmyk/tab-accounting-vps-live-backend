@@ -4,16 +4,40 @@ const { getConversionRate, getCompanyCurrency, getCompanyHistoricalCurrency } = 
 // Super Admin Dashboard Stats
 const getSuperAdminDashboardStats = async (req, res) => {
     try {
-        const totalCompanies = await prisma.company.count();
-        const totalRequests = await prisma.planrequest.count();
-
-        const payments = await prisma.paymentrecord.findMany({
-            where: { status: 'Success' }
-        });
-        const totalRevenue = payments.reduce((acc, curr) => acc + curr.amount, 0);
-
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+
+        // 1. Total Companies: Count all active companies from database
+        const activeCompanies = await prisma.company.findMany({
+            where: {
+                OR: [
+                    { endDate: null },
+                    { endDate: { gte: today } }
+                ]
+            },
+            include: {
+                plan: true
+            }
+        });
+
+        const totalCompanies = activeCompanies.length;
+
+        // 2. Active Subscriptions: Show how many companies currently have active plans
+        const activeSubscriptions = activeCompanies.filter(c => c.planId && c.plan).length;
+
+        // 3. Total Subscription Revenue: Calculate dynamically: SUM(active company subscription plan price)
+        const totalRevenue = activeCompanies.reduce((acc, curr) => {
+            if (curr.plan) {
+                const planPrice = parseFloat(curr.plan.totalPrice) || parseFloat(curr.plan.basePrice) || 0;
+                return acc + planPrice;
+            }
+            return acc;
+        }, 0);
+
+        // Total Plan Requests
+        const totalRequests = await prisma.planrequest.count();
+
+        // Signups today
         const todaySignups = await prisma.company.count({
             where: {
                 createdAt: {
@@ -22,28 +46,28 @@ const getSuperAdminDashboardStats = async (req, res) => {
             }
         });
 
-        // Monthly signups for charts
+        // Monthly signups and revenue for charts (current year)
         const startOfYear = new Date(new Date().getFullYear(), 0, 1);
-        const companies = await prisma.company.findMany({
+        const companiesCurrentYear = await prisma.company.findMany({
             where: {
                 createdAt: { gte: startOfYear }
             },
-            select: { createdAt: true }
+            select: { createdAt: true, plan: true }
         });
 
         const monthlySignups = Array(12).fill(0);
-        companies.forEach(c => {
+        const monthlyRevenue = Array(12).fill(0);
+
+        companiesCurrentYear.forEach(c => {
             const month = new Date(c.createdAt).getMonth();
             monthlySignups[month]++;
+            if (c.plan) {
+                const price = parseFloat(c.plan.totalPrice) || parseFloat(c.plan.basePrice) || 0;
+                monthlyRevenue[month] += price;
+            }
         });
 
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const growthData = months.map((month, index) => ({
-            name: month,
-            val: monthlySignups[index]
-        }));
-
-        // Monthly revenue for charts
+        // Also incorporate successful payment records if available for historical payments
         const successfulPayments = await prisma.paymentrecord.findMany({
             where: {
                 status: 'Success',
@@ -51,11 +75,22 @@ const getSuperAdminDashboardStats = async (req, res) => {
             }
         });
 
-        const monthlyRevenue = Array(12).fill(0);
-        successfulPayments.forEach(p => {
-            const month = new Date(p.date).getMonth();
-            monthlyRevenue[month] += p.amount;
-        });
+        if (successfulPayments.length > 0) {
+            const paymentMonthly = Array(12).fill(0);
+            successfulPayments.forEach(p => {
+                const month = new Date(p.date).getMonth();
+                paymentMonthly[month] += p.amount;
+            });
+            for (let i = 0; i < 12; i++) {
+                monthlyRevenue[i] = Math.max(monthlyRevenue[i], paymentMonthly[i]);
+            }
+        }
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const growthData = months.map((month, index) => ({
+            name: month,
+            val: monthlySignups[index]
+        }));
 
         const revenueData = months.map((month, index) => ({
             name: month,
@@ -65,8 +100,9 @@ const getSuperAdminDashboardStats = async (req, res) => {
         res.json({
             stats: {
                 totalCompanies,
-                totalRequests,
+                activeSubscriptions,
                 totalRevenue,
+                totalRequests,
                 todaySignups
             },
             charts: {
