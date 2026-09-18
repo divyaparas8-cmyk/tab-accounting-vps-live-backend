@@ -1,46 +1,7 @@
 const prisma = require('../config/prisma');
 const { getConversionRate, getCompanyCurrency, getCompanyHistoricalCurrency } = require('../utils/currencyConverter');
-const { cloudinary } = require('../utils/cloudinaryConfig');
+const { cloudinary, deleteLocalFile } = require('../utils/cloudinaryConfig');
 const { getInventoryConfig, recordStockIn } = require('../services/inventoryValuationService');
-
-// Helper: Upload buffer to Cloudinary
-const uploadImageToCloudinary = async (fileBuffer, filename) => {
-    if (!fileBuffer) return null;
-
-    try {
-        const result = await cloudinary.uploader.upload_stream(
-            { folder: 'products', public_id: filename },
-            (error, result) => {
-                if (error) throw error;
-                return result;
-            }
-        ).end(fileBuffer);
-
-        return result.secure_url;
-    } catch (error) {
-        console.error('Cloudinary upload error:', error);
-        throw new Error('Image upload failed');
-    }
-};
-
-// But upload_stream with .end() is callback-based → better to use promisify or use upload with buffer
-
-// ✅ Simpler: Use `upload` with buffer directly
-const uploadImageToCloudinaryV2 = async (fileBuffer, filename) => {
-    if (!fileBuffer) return null;
-
-    try {
-        const result = await cloudinary.uploader.upload(`data:image/png;base64,${fileBuffer.toString('base64')}`, {
-            folder: 'products',
-            public_id: filename,
-            resource_type: 'image'
-        });
-        return result.secure_url;
-    } catch (error) {
-        console.error('Cloudinary upload error:', error);
-        throw new Error('Image upload failed');
-    }
-};
 
 // Create Product
 const createProduct = async (req, res) => {
@@ -235,14 +196,9 @@ const createProduct = async (req, res) => {
     } catch (error) {
         console.error('Error creating product:', error);
 
-        // Clean up: delete image from Cloudinary if product creation failed
+        // Clean up: delete image from local storage if product creation failed
         if (imageUrl) {
-            try {
-                const publicId = imageUrl.split('/').pop().split('.')[0];
-                await cloudinary.uploader.destroy(`products/${publicId}`);
-            } catch (cleanupErr) {
-                console.warn('Failed to clean up image:', cleanupErr);
-            }
+            deleteLocalFile(imageUrl);
         }
 
         if (error.code === 'P2002') {
@@ -550,13 +506,8 @@ const updateProduct = async (req, res) => {
         }
 
         // ✅ Clean up old image if replaced
-        if (newImageUrl && oldImageUrl && oldImageUrl.includes('cloudinary')) {
-            try {
-                const publicId = oldImageUrl.split('/').pop().split('.')[0];
-                await cloudinary.uploader.destroy(`products/${publicId}`);
-            } catch (err) {
-                console.warn('Failed to delete old image:', err);
-            }
+        if (newImageUrl && oldImageUrl && newImageUrl !== oldImageUrl) {
+            deleteLocalFile(oldImageUrl);
         }
 
         const { logActivity } = require('../utils/auditLogger');
@@ -572,12 +523,7 @@ const updateProduct = async (req, res) => {
 
         // Clean up newly uploaded image if update failed
         if (newImageUrl) {
-            try {
-                const publicId = newImageUrl.split('/').pop().split('.')[0];
-                await cloudinary.uploader.destroy(`products/${publicId}`);
-            } catch (cleanupErr) {
-                console.warn('Failed to clean up new image:', cleanupErr);
-            }
+            deleteLocalFile(newImageUrl);
         }
 
         if (error.code === 'P2002') {
@@ -803,38 +749,13 @@ const deleteProduct = async (req, res) => {
 };
 
 const getCloudinarySignature = async (req, res) => {
-    try {
-        const { isCloudinaryConfigured } = require('../utils/cloudinaryConfig');
-        const apiKey = cloudinary.config().api_key;
-        if (!isCloudinaryConfigured || !apiKey || apiKey === 'placeholder') {
-            return res.status(200).json({
-                success: false,
-                isConfigured: false,
-                message: 'Cloudinary is not configured on the server. Please use /api/upload.'
-            });
-        }
-
-        const timestamp = Math.round((new Date).getTime() / 1000);
-        const folder = 'products';
-
-        const signature = cloudinary.utils.api_sign_request({
-            timestamp: timestamp,
-            folder: folder
-        }, cloudinary.config().api_secret);
-
-        res.status(200).json({
-            success: true,
-            isConfigured: true,
-            signature,
-            timestamp,
-            apiKey: cloudinary.config().api_key,
-            cloudName: cloudinary.config().cloud_name,
-            folder
-        });
-    } catch (error) {
-        console.error('Error generating signature:', error);
-        res.status(500).json({ success: false, message: 'Could not generate upload signature' });
-    }
+    // Cloudinary is deactivated — VPS local storage is active.
+    // Kept for backward compatibility with legacy clients.
+    return res.status(200).json({
+        success: false,
+        isConfigured: false,
+        message: 'Cloudinary is not configured on the server. Please use /api/upload for VPS local storage.'
+    });
 };
 
 module.exports = {
