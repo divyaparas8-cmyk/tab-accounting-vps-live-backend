@@ -392,13 +392,15 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
             doc.font('Helvetica').fillColor('#0f172a').text(`${currency} ${subtotalVal.toFixed(2)}`, 440, y, { align: 'right', width: 115 });
             y += 16;
 
-            doc.fontSize(9).font('Helvetica-Bold').fillColor(discountVal > 0 ? '#dc2626' : '#64748b').text('Discount:', totalsX, y);
-            doc.font('Helvetica').fillColor(discountVal > 0 ? '#dc2626' : '#0f172a').text(discountVal > 0 ? `-${currency} ${discountVal.toFixed(2)}` : `${currency} 0.00`, 440, y, { align: 'right', width: 115 });
-            y += 16;
+            if (discountVal > 0) {
+                doc.fontSize(9).font('Helvetica-Bold').fillColor('#dc2626').text('Discount:', totalsX, y);
+                doc.font('Helvetica').fillColor('#dc2626').text(`-${currency} ${discountVal.toFixed(2)}`, 440, y, { align: 'right', width: 115 });
+                y += 16;
 
-            doc.fontSize(9).font('Helvetica-Bold').fillColor('#475569').text('Taxable Amount:', totalsX, y);
-            doc.font('Helvetica').fillColor('#0f172a').text(`${currency} ${taxableVal.toFixed(2)}`, 440, y, { align: 'right', width: 115 });
-            y += 16;
+                doc.fontSize(9).font('Helvetica-Bold').fillColor('#475569').text('Taxable Amount:', totalsX, y);
+                doc.font('Helvetica').fillColor('#0f172a').text(`${currency} ${taxableVal.toFixed(2)}`, 440, y, { align: 'right', width: 115 });
+                y += 16;
+            }
 
             doc.fontSize(9).font('Helvetica-Bold').fillColor('#64748b').text('VAT:', totalsX, y);
             doc.font('Helvetica').fillColor('#0f172a').text(`${currency} ${taxVal.toFixed(2)}`, 440, y, { align: 'right', width: 115 });
