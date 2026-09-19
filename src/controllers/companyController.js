@@ -3,6 +3,7 @@ const prisma = require('../config/prisma');
 const chartOfAccountsService = require('../services/chartOfAccountsService');
 const numberingService = require('../services/numberingService');
 const { isCloudinaryConfigured, uploadToCloudinaryOrBase64 } = require('../utils/cloudinaryConfig');
+const { clearCompanyExpiryCache, setCompanyExpiryCache } = require('../middlewares/authMiddleware');
 
 const deriveCompanyPermissions = (modulesData) => {
     let modulesArray = [];
@@ -201,6 +202,32 @@ const createCompany = async (req, res) => {
             await chartOfAccountsService.initializeChartOfAccounts(result.company.id);
         } catch (coaError) {
             console.error('COA Initialization Error (Skipping):', coaError);
+        }
+
+        // Initialize active subscription record and clear expiry cache
+        try {
+            clearCompanyExpiryCache(result.company.id);
+            if (result.company.endDate) {
+                const expDate = new Date(result.company.endDate);
+                expDate.setHours(23, 59, 59, 999);
+                const isPlanActive = expDate.getTime() >= Date.now();
+                setCompanyExpiryCache(result.company.id, !isPlanActive);
+
+                await prisma.subscription.create({
+                    data: {
+                        companyId: result.company.id,
+                        planId: result.company.planId,
+                        startDate: result.company.startDate || new Date(),
+                        expiryDate: result.company.endDate,
+                        billingCycle: result.company.planType || 'Monthly',
+                        amount: parseFloat(result.company.plan?.totalPrice || result.company.plan?.basePrice || 0),
+                        status: isPlanActive ? 'ACTIVE' : 'EXPIRED',
+                        paymentReference: `INITIAL_ADMIN_${Date.now()}`
+                    }
+                });
+            }
+        } catch (subInitErr) {
+            console.warn('Initial subscription sync error (non-fatal):', subInitErr?.message);
         }
 
         res.status(201).json(result.company);
@@ -503,6 +530,59 @@ const updateCompany = async (req, res) => {
                 });
             } catch (syncErr) {
                 console.error('Error recording upgrade payment / syncing permissions:', syncErr);
+            }
+        }
+
+        // Determine plan active status
+        const finalEndDate = company.endDate ? new Date(company.endDate) : null;
+        let isPlanActive = false;
+        if (finalEndDate) {
+            finalEndDate.setHours(23, 59, 59, 999);
+            isPlanActive = finalEndDate.getTime() >= Date.now();
+        }
+
+        // 1. Immediately invalidate & update expiry cache so user can log in without waiting 5 minutes
+        clearCompanyExpiryCache(company.id);
+        setCompanyExpiryCache(company.id, !isPlanActive);
+
+        // 2. Synchronize Subscription table if plan or validity dates were modified
+        if (startDate !== undefined || endDate !== undefined || planId !== undefined || planType !== undefined || targetPlan) {
+            try {
+                const subBillingCycle = company.planType || planType || 'Yearly';
+                const subAmount = parseFloat(company.plan?.totalPrice || company.plan?.basePrice || targetPlan?.totalPrice || targetPlan?.basePrice || 0);
+
+                if (isPlanActive) {
+                    // Mark older active subscriptions as EXPIRED to keep a clean active record
+                    await prisma.subscription.updateMany({
+                        where: {
+                            companyId: company.id,
+                            status: 'ACTIVE'
+                        },
+                        data: { status: 'EXPIRED' }
+                    });
+
+                    // Create new ACTIVE subscription record
+                    await prisma.subscription.create({
+                        data: {
+                            companyId: company.id,
+                            planId: company.planId || (targetPlan ? targetPlan.id : null),
+                            startDate: company.startDate || new Date(),
+                            expiryDate: company.endDate,
+                            billingCycle: subBillingCycle,
+                            amount: subAmount,
+                            status: 'ACTIVE',
+                            paymentReference: `ADMIN_SYNC_${Date.now()}`
+                        }
+                    });
+                } else if (finalEndDate) {
+                    // Plan expired or ended in the past
+                    await prisma.subscription.updateMany({
+                        where: { companyId: company.id, status: 'ACTIVE' },
+                        data: { status: 'EXPIRED' }
+                    });
+                }
+            } catch (subSyncErr) {
+                console.error("Subscription sync error in updateCompany:", subSyncErr);
             }
         }
 

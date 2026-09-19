@@ -34,9 +34,8 @@ const authenticateToken = async (req, res, next) => {
 
                 if (company && company.endDate) {
                     expiryDate = new Date(company.endDate);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    isExpired = expiryDate < today;
+                    expiryDate.setHours(23, 59, 59, 999);
+                    isExpired = expiryDate.getTime() < now;
                 }
 
                 // Update cache
@@ -47,14 +46,15 @@ const authenticateToken = async (req, res, next) => {
 
             // If subscription is expired:
             // Allow all GET requests (read-only access to existing records, reports, profile, dashboards)
-            // Allow subscription management endpoints (/api/company/subscription, /api/plans, /api/auth)
+            // Allow subscription management endpoints (/api/company/subscription, /api/plans, /api/auth, /api/companies)
             // Block mutating operations (POST, PUT, PATCH, DELETE) on business modules
             if (isExpired) {
                 const rawUrl = (req.originalUrl || req.url || '').toLowerCase();
                 const isSubscriptionOrAuthRoute = rawUrl.includes('/subscription') || 
                                                  rawUrl.includes('/plan') || 
                                                  rawUrl.includes('/auth') || 
-                                                 rawUrl.includes('/switch-company');
+                                                 rawUrl.includes('/switch-company') ||
+                                                 rawUrl.includes('/companies');
 
                 if (!isSubscriptionOrAuthRoute && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
                     return res.status(403).json({ 
@@ -187,4 +187,16 @@ const clearCompanyExpiryCache = (companyId) => {
     }
 };
 
-module.exports = { authenticateToken, authorizeRoles, authorizePermissions, clearCompanyExpiryCache };
+const setCompanyExpiryCache = (companyId, isExpired) => {
+    if (companyId) {
+        expiryCache.set(parseInt(companyId), { timestamp: Date.now(), isExpired: Boolean(isExpired) });
+    }
+};
+
+module.exports = { 
+    authenticateToken, 
+    authorizeRoles, 
+    authorizePermissions, 
+    clearCompanyExpiryCache,
+    setCompanyExpiryCache 
+};

@@ -149,25 +149,8 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
             doc.font('Helvetica-Bold').fillColor(computedStatus === 'PAID' ? '#16a34a' : (computedStatus === 'OVERDUE' ? '#dc2626' : '#ea580c'))
                 .text(computedStatus, 440, metaY, { align: 'right', width: 115 });
 
-            // Table Header Function
-            const drawTableHeader = (headerY) => {
-                doc.rect(40, headerY, 515, 22).fill(tableHeaderBg);
-                doc.fillColor(tableHeaderText).font('Helvetica-Bold').fontSize(8.5);
-                doc.text('ACTIVITY', 45, headerY + 6, { width: 100, align: 'left' });
-                doc.text('DESCRIPTION', 150, headerY + 6, { width: 140, align: 'left' });
-                doc.text('QUANTITY', 295, headerY + 6, { width: 40, align: 'right' });
-                doc.text('RATE', 340, headerY + 6, { width: 45, align: 'right' });
-                doc.text('DISCOUNT', 390, headerY + 6, { width: 50, align: 'center' });
-                doc.text('TAX', 445, headerY + 6, { width: 45, align: 'center' });
-                doc.text('PRICE', 495, headerY + 6, { width: 55, align: 'right' });
-            };
-
-            y = Math.max(195, metaY + 15);
-            drawTableHeader(y);
-            y += 22;
-
-            // Table Rows
-            const items = invoice?.invoiceitem || invoice?.items || [];
+            // Table Rows & Discount detection
+            const items = invoice?.invoiceitem || invoice?.posinvoiceitem || invoice?.items || [];
             let subtotal = 0;
 
             let cfObj = {};
@@ -179,6 +162,41 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
                 }
             }
             const itemsMeta = Array.isArray(cfObj?._itemsDiscountMeta) ? cfObj._itemsDiscountMeta : [];
+
+            const hasDiscount = Boolean(
+                (parseFloat(invoice?.discountAmount || invoice?.discount || 0) > 0) ||
+                (items && items.some((item, idx) => {
+                    const meta = itemsMeta[idx] || (Array.isArray(itemsMeta) && itemsMeta.find(m => (m.productId && String(m.productId) === String(item.productId)) || (m.serviceId && String(m.serviceId) === String(item.serviceId))));
+                    const discVal = meta?.discount !== undefined ? parseFloat(meta.discount) : (item.discountValue !== undefined ? parseFloat(item.discountValue) : parseFloat(item.discount || 0));
+                    const itemDiscAmount = parseFloat(item.discountAmount || 0);
+                    return (discVal > 0) || (itemDiscAmount > 0);
+                }))
+            );
+
+            // Table Header Function
+            const drawTableHeader = (headerY) => {
+                doc.rect(40, headerY, 515, 22).fill(tableHeaderBg);
+                doc.fillColor(tableHeaderText).font('Helvetica-Bold').fontSize(8.5);
+                doc.text('ACTIVITY', 45, headerY + 6, { width: 100, align: 'left' });
+                if (hasDiscount) {
+                    doc.text('DESCRIPTION', 150, headerY + 6, { width: 140, align: 'left' });
+                    doc.text('QUANTITY', 295, headerY + 6, { width: 40, align: 'right' });
+                    doc.text('RATE', 340, headerY + 6, { width: 45, align: 'right' });
+                    doc.text('DISCOUNT', 390, headerY + 6, { width: 50, align: 'center' });
+                    doc.text('TAX', 445, headerY + 6, { width: 45, align: 'center' });
+                    doc.text('PRICE', 495, headerY + 6, { width: 55, align: 'right' });
+                } else {
+                    doc.text('DESCRIPTION', 150, headerY + 6, { width: 190, align: 'left' });
+                    doc.text('QUANTITY', 345, headerY + 6, { width: 45, align: 'right' });
+                    doc.text('RATE', 395, headerY + 6, { width: 45, align: 'right' });
+                    doc.text('TAX', 445, headerY + 6, { width: 45, align: 'center' });
+                    doc.text('PRICE', 495, headerY + 6, { width: 55, align: 'right' });
+                }
+            };
+
+            y = Math.max(195, metaY + 15);
+            drawTableHeader(y);
+            y += 22;
 
             if (items.length > 0) {
                 items.forEach((item, idx) => {
@@ -210,7 +228,8 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
                     const actHeight = doc.heightOfString(actName || '', { width: 100, lineGap: 0 });
 
                     doc.font('Helvetica').fontSize(8);
-                    const descHeight = descText ? doc.heightOfString(descText, { width: 140, lineGap: 1.5 }) : 0;
+                    const descWidth = hasDiscount ? 140 : 190;
+                    const descHeight = descText ? doc.heightOfString(descText, { width: descWidth, lineGap: 1.5 }) : 0;
 
                     const contentHeight = Math.max(actHeight, descHeight, 14);
                     const rowPadding = 12;
@@ -239,7 +258,7 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
                     // Description (wrapping cleanly without truncation)
                     if (descText) {
                         doc.fillColor('#475569').font('Helvetica').fontSize(8).lineGap(1.5);
-                        doc.text(descText, 150, descY, { width: 140, align: 'left', lineGap: 1.5 });
+                        doc.text(descText, 150, descY, { width: descWidth, align: 'left', lineGap: 1.5 });
                     }
 
                     const discText = discVal > 0 ? (discType === 'percentage' ? `${discVal}%` : `-${discVal.toFixed(2)}`) : '0%';
@@ -247,11 +266,18 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
 
                     // Numeric columns vertically aligned with row
                     doc.fillColor('#1e293b').font('Helvetica').fontSize(8.5).lineGap(0);
-                    doc.text(qty.toString(), 295, numY, { width: 40, align: 'right', lineGap: 0 });
-                    doc.text(rate.toFixed(2), 340, numY, { width: 45, align: 'right', lineGap: 0 });
-                    doc.text(discText, 390, numY, { width: 50, align: 'center', lineGap: 0 });
-                    doc.text(taxText, 445, numY, { width: 45, align: 'center', lineGap: 0 });
-                    doc.text(`${currency} ${amount.toFixed(2)}`, 495, numY, { width: 55, align: 'right', lineGap: 0 });
+                    if (hasDiscount) {
+                        doc.text(qty.toString(), 295, numY, { width: 40, align: 'right', lineGap: 0 });
+                        doc.text(rate.toFixed(2), 340, numY, { width: 45, align: 'right', lineGap: 0 });
+                        doc.text(discText, 390, numY, { width: 50, align: 'center', lineGap: 0 });
+                        doc.text(taxText, 445, numY, { width: 45, align: 'center', lineGap: 0 });
+                        doc.text(`${currency} ${amount.toFixed(2)}`, 495, numY, { width: 55, align: 'right', lineGap: 0 });
+                    } else {
+                        doc.text(qty.toString(), 345, numY, { width: 45, align: 'right', lineGap: 0 });
+                        doc.text(rate.toFixed(2), 395, numY, { width: 45, align: 'right', lineGap: 0 });
+                        doc.text(taxText, 445, numY, { width: 45, align: 'center', lineGap: 0 });
+                        doc.text(`${currency} ${amount.toFixed(2)}`, 495, numY, { width: 55, align: 'right', lineGap: 0 });
+                    }
 
                     // Clean row bottom border
                     doc.moveTo(40, y + rowHeight).lineTo(555, y + rowHeight).strokeColor('#e2e8f0').lineWidth(0.5).stroke();
@@ -261,13 +287,21 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
             } else {
                 doc.rect(40, y, 515, 20).fill('#ffffff');
                 doc.fillColor('#1e293b').font('Helvetica').fontSize(9);
-                doc.text(`Invoice #${invoiceNumber} Services / Products`, 45, y + 5, { width: 245, align: 'left' });
-                doc.text('1', 295, y + 5, { width: 40, align: 'right' });
+                const descW = hasDiscount ? 245 : 295;
+                doc.text(`Invoice #${invoiceNumber} Services / Products`, 45, y + 5, { width: descW, align: 'left' });
                 const amt = parseFloat(invoice?.totalAmount || 0);
-                doc.text(amt.toFixed(2), 340, y + 5, { width: 45, align: 'right' });
-                doc.text('0%', 390, y + 5, { width: 50, align: 'center' });
-                doc.text('No VAT', 445, y + 5, { width: 45, align: 'center' });
-                doc.text(`${currency} ${amt.toFixed(2)}`, 495, y + 5, { width: 55, align: 'right' });
+                if (hasDiscount) {
+                    doc.text('1', 295, y + 5, { width: 40, align: 'right' });
+                    doc.text(amt.toFixed(2), 340, y + 5, { width: 45, align: 'right' });
+                    doc.text('0%', 390, y + 5, { width: 50, align: 'center' });
+                    doc.text('No VAT', 445, y + 5, { width: 45, align: 'center' });
+                    doc.text(`${currency} ${amt.toFixed(2)}`, 495, y + 5, { width: 55, align: 'right' });
+                } else {
+                    doc.text('1', 345, y + 5, { width: 45, align: 'right' });
+                    doc.text(amt.toFixed(2), 395, y + 5, { width: 45, align: 'right' });
+                    doc.text('No VAT', 445, y + 5, { width: 45, align: 'center' });
+                    doc.text(`${currency} ${amt.toFixed(2)}`, 495, y + 5, { width: 55, align: 'right' });
+                }
                 y += 20;
             }
 

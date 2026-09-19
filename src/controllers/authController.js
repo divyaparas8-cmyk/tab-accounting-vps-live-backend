@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { clearCompanyExpiryCache, setCompanyExpiryCache } = require('../middlewares/authMiddleware');
 
 const register = async (req, res) => {
     try {
@@ -140,12 +141,16 @@ const login = async (req, res) => {
         let subscriptionStatus = 'ACTIVE';
         if (activeRole !== 'SUPERADMIN' && activeCompany && activeCompany.endDate) {
             const expiryDate = new Date(activeCompany.endDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            expiryDate.setHours(23, 59, 59, 999);
             
-            if (expiryDate < today) {
+            if (expiryDate.getTime() < Date.now()) {
                 isExpired = true;
                 subscriptionStatus = 'EXPIRED';
+            }
+
+            if (activeCompanyId) {
+                clearCompanyExpiryCache(activeCompanyId);
+                setCompanyExpiryCache(activeCompanyId, isExpired);
             }
         }
 
@@ -338,12 +343,14 @@ const switchCompany = async (req, res) => {
         let subscriptionStatus = 'ACTIVE';
         if (user.role !== 'SUPERADMIN' && targetCompany.endDate) {
             const expiryDate = new Date(targetCompany.endDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (expiryDate < today) {
+            expiryDate.setHours(23, 59, 59, 999);
+            if (expiryDate.getTime() < Date.now()) {
                 isExpired = true;
                 subscriptionStatus = 'EXPIRED';
             }
+
+            clearCompanyExpiryCache(targetCompany.id);
+            setCompanyExpiryCache(targetCompany.id, isExpired);
         }
 
         // Update user's active companyId in DB
@@ -494,13 +501,15 @@ const impersonate = async (req, res) => {
         let subscriptionStatus = 'ACTIVE';
         if (user.company && user.company.endDate) {
             const expiryDate = new Date(user.company.endDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            expiryDate.setHours(23, 59, 59, 999);
             
-            if (expiryDate < today) {
+            if (expiryDate.getTime() < Date.now()) {
                 isExpired = true;
                 subscriptionStatus = 'EXPIRED';
             }
+
+            clearCompanyExpiryCache(user.companyId);
+            setCompanyExpiryCache(user.companyId, isExpired);
         }
 
         let permissions = [];

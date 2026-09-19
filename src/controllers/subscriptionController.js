@@ -62,8 +62,7 @@ const getSubscriptionStatus = async (req, res) => {
             return res.status(404).json({ message: 'Company not found' });
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const now = new Date();
 
         let isExpired = false;
         let daysRemaining = 0;
@@ -72,10 +71,10 @@ const getSubscriptionStatus = async (req, res) => {
 
         if (company.endDate) {
             const expiryDate = new Date(company.endDate);
-            expiryDate.setHours(0, 0, 0, 0);
+            expiryDate.setHours(23, 59, 59, 999);
             
-            const diffTime = expiryDate.getTime() - today.getTime();
-            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            const diffTime = expiryDate.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
             if (diffDays < 0) {
                 isExpired = true;
@@ -85,7 +84,7 @@ const getSubscriptionStatus = async (req, res) => {
             } else {
                 isExpired = false;
                 status = 'ACTIVE';
-                daysRemaining = diffDays;
+                daysRemaining = Math.max(0, diffDays);
                 daysExpired = 0;
             }
         }
@@ -140,50 +139,79 @@ const getSubscriptionHistory = async (req, res) => {
             orderBy: { createdAt: 'desc' }
         });
 
-        // If no records exist yet for this company, synthesize/create the initial record from company data
-        if (subscriptions.length === 0) {
-            const company = await prisma.company.findUnique({
-                where: { id: companyId },
-                include: { plan: true }
+        const company = await prisma.company.findUnique({
+            where: { id: companyId },
+            include: { plan: true }
+        });
+
+        // If company has active endDate, ensure the active subscription record is present in history
+        if (company && company.endDate) {
+            const expDate = new Date(company.endDate);
+            expDate.setHours(23, 59, 59, 999);
+            const isPlanActive = expDate.getTime() >= Date.now();
+
+            const hasMatchingActiveSub = subscriptions.some(s => {
+                if (s.status !== 'ACTIVE') return false;
+                const subExp = new Date(s.expiryDate);
+                subExp.setHours(23, 59, 59, 999);
+                return subExp.getTime() >= Date.now();
             });
 
-            if (company) {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const isPast = company.endDate && new Date(company.endDate) < today;
-                const initialSub = await prisma.subscription.create({
+            if (isPlanActive && !hasMatchingActiveSub) {
+                // Archive older active subscriptions
+                await prisma.subscription.updateMany({
+                    where: { companyId, status: 'ACTIVE' },
+                    data: { status: 'EXPIRED' }
+                });
+
+                const newActiveSub = await prisma.subscription.create({
                     data: {
                         companyId: company.id,
                         planId: company.planId,
                         startDate: company.startDate || new Date(),
-                        expiryDate: company.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                        billingCycle: company.planType || 'Monthly',
+                        expiryDate: company.endDate,
+                        billingCycle: company.planType || 'Yearly',
                         amount: parseFloat(company.plan?.totalPrice || company.plan?.basePrice || 0),
-                        status: isPast ? 'EXPIRED' : 'ACTIVE',
-                        paymentReference: 'INITIAL_ACTIVATION'
+                        status: 'ACTIVE',
+                        paymentReference: `ADMIN_SYNC_${Date.now()}`
                     },
                     include: { plan: true }
                 });
-                subscriptions = [initialSub];
+                subscriptions.unshift(newActiveSub);
             }
+        } else if (subscriptions.length === 0 && company) {
+            // Initial fallback if no subscriptions exist
+            const initialSub = await prisma.subscription.create({
+                data: {
+                    companyId: company.id,
+                    planId: company.planId,
+                    startDate: company.startDate || new Date(),
+                    expiryDate: company.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    billingCycle: company.planType || 'Monthly',
+                    amount: parseFloat(company.plan?.totalPrice || company.plan?.basePrice || 0),
+                    status: 'EXPIRED',
+                    paymentReference: 'INITIAL_ACTIVATION'
+                },
+                include: { plan: true }
+            });
+            subscriptions = [initialSub];
         }
 
         // Format history response
         const formattedHistory = subscriptions.map(sub => {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            const now = new Date();
             const expDate = new Date(sub.expiryDate);
-            expDate.setHours(0, 0, 0, 0);
+            expDate.setHours(23, 59, 59, 999);
             
             let status = sub.status;
-            if (status === 'ACTIVE' && expDate < today) {
+            if (status === 'ACTIVE' && expDate.getTime() < now.getTime()) {
                 status = 'EXPIRED';
             }
 
             return {
                 id: sub.id,
                 planId: sub.planId,
-                planName: sub.plan?.name || 'Custom Plan',
+                planName: sub.plan?.name || company?.planName || 'Standard Plan',
                 billingCycle: sub.billingCycle,
                 startDate: sub.startDate,
                 expiryDate: sub.expiryDate,
