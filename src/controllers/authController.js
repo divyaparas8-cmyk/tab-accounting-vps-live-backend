@@ -34,7 +34,8 @@ const register = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const normalizedEmail = email.toLowerCase();
+        const normalizedEmail = (email || '').trim().toLowerCase();
+        const trimmedPassword = (password || '').trim();
 
         const user = await prisma.user.findUnique({
             where: { email: normalizedEmail },
@@ -50,7 +51,10 @@ const login = async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        const isMatch = await bcrypt.compare(password, user.password);
+        let isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch && trimmedPassword !== password) {
+            isMatch = await bcrypt.compare(trimmedPassword, user.password);
+        }
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
@@ -478,7 +482,7 @@ const impersonate = async (req, res) => {
         }
 
         // Find the admin user (role='COMPANY') for this company
-        const user = await prisma.user.findFirst({
+        let user = await prisma.user.findFirst({
             where: { 
                 companyId: parseInt(companyId),
                 role: 'COMPANY'
@@ -491,6 +495,22 @@ const impersonate = async (req, res) => {
                 }
             }
         });
+
+        // Fallback: If no role='COMPANY' user exists, find any user for this company
+        if (!user) {
+            user = await prisma.user.findFirst({
+                where: { 
+                    companyId: parseInt(companyId)
+                },
+                include: {
+                    company: {
+                        include: {
+                            plan: true
+                        }
+                    }
+                }
+            });
+        }
 
         if (!user) {
             return res.status(404).json({ message: 'No admin user found for this company' });
@@ -534,6 +554,46 @@ const impersonate = async (req, res) => {
             console.error("Perm fetch error in impersonate:", e);
         }
 
+        // Default permissions for company admin if none found in role table
+        if (!permissions || permissions.length === 0) {
+            permissions = [
+                "show dashboard",
+                "manage voucher", "create voucher", "edit voucher", "delete voucher",
+                "manage reports", "view reports",
+                "manage user", "create user", "edit user", "delete user",
+                "manage role", "create role", "edit role", "delete role",
+                "manage settings", "edit settings", "view settings",
+                "manage accounts", "create accounts", "edit accounts", "delete accounts", "view accounts",
+                "manage inventory", "create inventory", "edit inventory", "delete inventory", "view inventory",
+                "manage sales", "create sales", "edit sales", "delete sales", "show sales", "send sales", "view sales",
+                "manage purchases", "create purchases", "edit purchases", "delete purchases", "view purchases",
+                "manage pos", "create pos", "edit pos", "delete pos", "view pos"
+            ];
+        }
+
+        // Fetch all linked companies for user payload to prevent Navbar from making extra requests
+        const allCompanyUsers = await prisma.company_user.findMany({
+            where: { userId: user.id },
+            include: {
+                company: {
+                    include: { plan: true }
+                }
+            },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        const userCompanies = allCompanyUsers.map(cu => ({
+            id: cu.company.id,
+            name: cu.company.name,
+            email: cu.company.email,
+            logo: cu.company.logo,
+            currency: cu.company.currency,
+            role: cu.role,
+            roleId: cu.roleId,
+            plan: cu.company.plan,
+            isDefault: cu.company.id === user.companyId
+        }));
+
         const token = jwt.sign(
             { 
                 userId: user.id, 
@@ -559,6 +619,7 @@ const impersonate = async (req, res) => {
                 role: user.role,
                 companyId: user.companyId,
                 company: user.company,
+                companies: userCompanies,
                 permissions: permissions,
                 planModules: planModules,
                 isExpired: isExpired,

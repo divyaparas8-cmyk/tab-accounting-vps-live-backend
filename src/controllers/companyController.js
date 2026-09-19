@@ -503,6 +503,39 @@ const updateCompany = async (req, res) => {
 
         logToFile(`✅ Company updated in DB. company.invoiceLabels value: ${company.invoiceLabels}`);
 
+        // If password provided in update request, reset the company admin user's password
+        if (req.body.password && req.body.password.trim()) {
+            try {
+                const newHashedPassword = await bcrypt.hash(req.body.password.trim(), 10);
+                await prisma.user.updateMany({
+                    where: {
+                        companyId: company.id,
+                        role: 'COMPANY'
+                    },
+                    data: {
+                        password: newHashedPassword
+                    }
+                });
+            } catch (pwdErr) {
+                console.error('Error updating company admin password:', pwdErr);
+            }
+        }
+        if (email && email.trim()) {
+            try {
+                await prisma.user.updateMany({
+                    where: {
+                        companyId: company.id,
+                        role: 'COMPANY'
+                    },
+                    data: {
+                        email: email.toLowerCase().trim()
+                    }
+                });
+            } catch (emailErr) {
+                console.error('Error updating company admin email:', emailErr);
+            }
+        }
+
         // If plan changed / upgraded, record payment record and synchronize role permissions
         if (targetPlan && currentCompany.planId !== targetPlan.id) {
             try {
