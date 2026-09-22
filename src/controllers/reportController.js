@@ -1,5 +1,7 @@
 const prisma = require('../config/prisma');
 const { getConversionRate, getCompanyCurrency, getCompanyHistoricalCurrency } = require('../utils/currencyConverter');
+const { getDeduplicatedInvoiceReceipts, adjustInvoiceWithReturns } = require('./salesInvoiceController');
+const { isDuePassed, getDecimalPlaces } = require('../utils/invoiceSyncHelper');
 
 // Helper to calculate total inventory value for a company as of now
 const calculateInventoryValue = async (companyId) => {
@@ -64,6 +66,253 @@ const toEndOfDay = (dateStr) => {
     const d = new Date(dateStr);
     d.setHours(23, 59, 59, 999);
     return d;
+};
+
+// Helper to calculate Overdue Invoices for the Last 365 Days using authoritative business logic
+const getOverdueInvoicesLast365Days = async (companyId) => {
+    const companyIdInt = parseInt(companyId);
+    if (!companyIdInt) return { overdueCount: 0, totalOverdueAmount: 0, invoices: [] };
+
+    const now = new Date();
+    const past365Days = new Date(now);
+    past365Days.setDate(past365Days.getDate() - 365);
+    past365Days.setHours(0, 0, 0, 0);
+
+    const companyCurrency = await getCompanyCurrency(companyIdInt);
+
+    // Rate cache for multi-currency conversion
+    const rateCache = {};
+    const getRate = async (curr) => {
+        const c = curr || companyCurrency || 'USD';
+        if (c === companyCurrency) return 1.0;
+        if (!rateCache[c]) {
+            rateCache[c] = await getConversionRate(c, companyCurrency);
+        }
+        return rateCache[c] || 1.0;
+    };
+
+    // Query standard sales invoices from the last 365 days that are not cancelled
+    const rawInvoices = await prisma.invoice.findMany({
+        where: {
+            companyId: companyIdInt,
+            date: {
+                gte: past365Days,
+                lte: now
+            },
+            status: {
+                notIn: ['CANCELLED']
+            }
+        },
+        include: {
+            customer: true,
+            salesperson: true,
+            salesreturn: {
+                include: { salesreturnitem: true }
+            },
+            receipt: {
+                include: {
+                    cashBankAccount: { select: { id: true, name: true } },
+                    transaction: true
+                }
+            },
+            allocations: {
+                include: {
+                    receipt: {
+                        include: {
+                            cashBankAccount: { select: { id: true, name: true } },
+                            transaction: true
+                        }
+                    }
+                }
+            }
+        },
+        orderBy: { dueDate: 'asc' }
+    });
+
+    // Query POS invoices from the last 365 days that are not cancelled
+    const rawPosInvoices = await prisma.posinvoice.findMany({
+        where: {
+            companyId: companyIdInt,
+            date: {
+                gte: past365Days,
+                lte: now
+            },
+            status: {
+                notIn: ['CANCELLED', 'Cancelled']
+            }
+        },
+        include: {
+            customer: true,
+            posinvoiceitem: { include: { product: true } },
+            transaction: {
+                include: {
+                    ledger_transaction_debitLedgerIdToledger: { select: { id: true, name: true } }
+                }
+            }
+        },
+        orderBy: { date: 'asc' }
+    });
+
+    // Associated POS returns
+    const posReturns = await prisma.salesreturn.findMany({
+        where: { companyId: companyIdInt, invoiceId: null },
+        include: { salesreturnitem: true }
+    });
+
+    const overdueList = [];
+    let totalOverdueAmount = 0;
+
+    // Process standard invoices using adjustInvoiceWithReturns
+    for (const inv of rawInvoices) {
+        const deduplicatedReceipts = getDeduplicatedInvoiceReceipts(inv);
+        const adjusted = adjustInvoiceWithReturns({
+            ...inv,
+            type: 'TAX_INVOICE',
+            receipt: deduplicatedReceipts
+        });
+
+        const rate = await getRate(inv.currency);
+        const decimals = getDecimalPlaces(inv.currency);
+        const tol = decimals === 3 ? 0.001 : 0.01;
+
+        const rawBalance = parseFloat(adjusted.balanceAmount || 0);
+        const duePassed = isDuePassed(adjusted.dueDate || adjusted.date);
+
+        // Qualification for overdue:
+        // 1. Due date has passed
+        // 2. Outstanding balance > tolerance
+        // 3. Not cancelled and not fully paid
+        if (duePassed && rawBalance > tol && adjusted.status !== 'CANCELLED' && adjusted.status !== 'Cancelled' && adjusted.status !== 'PAID') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const due = new Date(adjusted.dueDate || adjusted.date);
+            due.setHours(0, 0, 0, 0);
+            const daysOverdue = Math.max(1, Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24)));
+
+            const balanceInCompanyCurrency = rawBalance * rate;
+            const totalInCompanyCurrency = parseFloat(adjusted.totalAmount || 0) * rate;
+            const paidInCompanyCurrency = parseFloat(adjusted.paidAmount || 0) * rate;
+
+            totalOverdueAmount += balanceInCompanyCurrency;
+            overdueList.push({
+                id: adjusted.id,
+                invoiceId: adjusted.id,
+                invoiceNumber: adjusted.invoiceNumber,
+                type: 'TAX_INVOICE',
+                date: adjusted.date,
+                dueDate: adjusted.dueDate || adjusted.date,
+                daysOverdue,
+                customer: adjusted.customer ? {
+                    id: adjusted.customer.id,
+                    name: adjusted.customer.name,
+                    email: adjusted.customer.email,
+                    phone: adjusted.customer.phone
+                } : null,
+                customerName: adjusted.customer?.name || 'Walk-in Customer',
+                totalAmount: totalInCompanyCurrency,
+                paidAmount: paidInCompanyCurrency,
+                balanceAmount: balanceInCompanyCurrency,
+                rawTotalAmount: adjusted.totalAmount,
+                rawPaidAmount: adjusted.paidAmount,
+                rawBalanceAmount: rawBalance,
+                currency: inv.currency || companyCurrency,
+                status: 'OVERDUE'
+            });
+        }
+    }
+
+    // Process POS invoices
+    for (const pos of rawPosInvoices) {
+        const associatedReturns = posReturns.filter(ret => {
+            if (ret.customFields) {
+                try {
+                    const parsedCF = typeof ret.customFields === 'string' ? JSON.parse(ret.customFields) : ret.customFields;
+                    return parsedCF && parseInt(parsedCF.posInvoiceId) === pos.id;
+                } catch (e) {
+                    return false;
+                }
+            }
+            return false;
+        });
+
+        const receiptTransactions = pos.transaction?.filter(t => t.voucherType === 'RECEIPT') || [];
+        const mappedReceipts = receiptTransactions.map(t => ({
+            id: t.id,
+            receiptNumber: t.voucherNumber || '-',
+            date: t.date,
+            amount: t.amount
+        }));
+
+        const adjusted = adjustInvoiceWithReturns({
+            ...pos,
+            type: 'POS_INVOICE',
+            invoiceitem: (pos.posinvoiceitem || []).map(item => ({
+                ...item,
+                productId: item.productId,
+                quantity: item.quantity,
+                rate: item.rate,
+                amount: item.amount,
+                product: item.product
+            })),
+            salesreturn: associatedReturns,
+            dueDate: pos.date,
+            receipt: mappedReceipts
+        });
+
+        const rate = await getRate(pos.currency);
+        const rawBalance = parseFloat(adjusted.balanceAmount || 0);
+        const duePassed = isDuePassed(adjusted.dueDate || adjusted.date);
+
+        if (duePassed && rawBalance > 0.01 && adjusted.status !== 'CANCELLED' && adjusted.status !== 'Cancelled' && adjusted.status !== 'PAID') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const due = new Date(adjusted.dueDate || adjusted.date);
+            due.setHours(0, 0, 0, 0);
+            const daysOverdue = Math.max(1, Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24)));
+
+            const balanceInCompanyCurrency = rawBalance * rate;
+            const totalInCompanyCurrency = parseFloat(adjusted.totalAmount || 0) * rate;
+            const paidInCompanyCurrency = parseFloat(adjusted.paidAmount || 0) * rate;
+
+            totalOverdueAmount += balanceInCompanyCurrency;
+            overdueList.push({
+                id: adjusted.id,
+                invoiceId: adjusted.id,
+                invoiceNumber: adjusted.invoiceNumber,
+                type: 'POS_INVOICE',
+                date: adjusted.date || adjusted.createdAt,
+                dueDate: adjusted.dueDate || adjusted.date || adjusted.createdAt,
+                daysOverdue,
+                customer: adjusted.customer ? {
+                    id: adjusted.customer.id,
+                    name: adjusted.customer.name,
+                    email: adjusted.customer.email,
+                    phone: adjusted.customer.phone
+                } : null,
+                customerName: adjusted.customer?.name || 'Walk-in Customer',
+                totalAmount: totalInCompanyCurrency,
+                paidAmount: paidInCompanyCurrency,
+                balanceAmount: balanceInCompanyCurrency,
+                rawTotalAmount: adjusted.totalAmount,
+                rawPaidAmount: adjusted.paidAmount,
+                rawBalanceAmount: rawBalance,
+                currency: pos.currency || companyCurrency,
+                status: 'OVERDUE'
+            });
+        }
+    }
+
+    // Sort overdue invoices: oldest due date first
+    overdueList.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+    return {
+        overdueCount: overdueList.length,
+        totalOverdueAmount: Math.round(totalOverdueAmount * 100) / 100,
+        invoices: overdueList,
+        asOfDate: now.toISOString(),
+        startDate: past365Days.toISOString(),
+        endDate: now.toISOString()
+    };
 };
 
 const getSalesReport = async (req, res) => {
@@ -273,7 +522,17 @@ const getSalesReport = async (req, res) => {
 
         summary.netRevenue = summary.totalSales - summary.totalReturns;
 
-        res.status(200).json({ success: true, data: combinedData, summary });
+        // Calculate authoritative Overdue Invoices for the Last 365 Days
+        const overdueData = await getOverdueInvoicesLast365Days(companyId);
+        summary.overdue = overdueData.totalOverdueAmount;
+        summary.overdueCount = overdueData.overdueCount;
+
+        res.status(200).json({
+            success: true,
+            data: combinedData,
+            summary,
+            overdueInvoices: overdueData.invoices
+        });
 
     } catch (error) {
         console.error('Error fetching sales report:', error);
@@ -603,8 +862,10 @@ const getPurchaseReport = async (req, res) => {
             summary.totalPaid += paid;
             summary.totalUnpaid += unpaid;
 
-            if (bill.dueDate && new Date(bill.dueDate) < now && unpaid > 0) {
+            const due = bill.dueDate ? new Date(bill.dueDate) : (bill.date ? new Date(bill.date) : null);
+            if (due && due < now && unpaid > 0.01 && bill.status !== 'CANCELLED' && bill.status !== 'PAID') {
                 summary.overdue += unpaid;
+                summary.overdueCount = (summary.overdueCount || 0) + 1;
             }
         });
 
@@ -613,6 +874,8 @@ const getPurchaseReport = async (req, res) => {
         });
 
         summary.netPurchase = summary.totalPurchases - summary.totalReturns;
+        summary.overdue = Math.round((summary.overdue || 0) * 100) / 100;
+        summary.overdueCount = summary.overdueCount || 0;
 
         res.status(200).json({ success: true, data: combinedData, summary });
     } catch (error) {
@@ -4186,6 +4449,21 @@ const getDepartmentalPnL = async (req, res) => {
     }
 };
 
+const getOverdueInvoicesReport = async (req, res) => {
+    try {
+        const companyId = req.user?.companyId || req.query.companyId;
+        if (!companyId) {
+            return res.status(400).json({ success: false, message: 'Company ID is required' });
+        }
+
+        const data = await getOverdueInvoicesLast365Days(companyId);
+        res.status(200).json({ success: true, ...data });
+    } catch (error) {
+        console.error('Error fetching overdue invoices report:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
 module.exports = {
     getSalesReport,
     getSalesByItemReport,
@@ -4206,5 +4484,6 @@ module.exports = {
     getTrialBalance,
     getAllTransactions,
     getAgingReport,
-    getDepartmentalPnL
+    getDepartmentalPnL,
+    getOverdueInvoicesReport
 };

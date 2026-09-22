@@ -24,5 +24,6 @@ router.get('/trial-balance', authenticateToken, reportController.getTrialBalance
 router.get('/transactions', authenticateToken, reportController.getAllTransactions);
 router.get('/aging', authenticateToken, reportController.getAgingReport);
 router.get('/departmental-pnl', authenticateToken, reportController.getDepartmentalPnL);
+router.get('/overdue-invoices', authenticateToken, reportController.getOverdueInvoicesReport);
 
 module.exports = router;
