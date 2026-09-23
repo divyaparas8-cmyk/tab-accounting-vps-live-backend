@@ -1,4 +1,4 @@
-﻿const prisma = require('../config/prisma');
+const prisma = require('../config/prisma');
 const { getConversionRate, getCompanyCurrency, getCompanyHistoricalCurrency } = require('../utils/currencyConverter');
 const { getDeduplicatedInvoiceReceipts, adjustInvoiceWithReturns } = require('./salesInvoiceController');
 const { isDuePassed, getDecimalPlaces } = require('../utils/invoiceSyncHelper');
@@ -323,11 +323,21 @@ const getSalesReport = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Company ID is required' });
         }
 
-        const { startDate, endDate, transactionFilter } = req.query; // 'ALL', 'SALES', 'RETURNS'
+        const { startDate, endDate, transactionFilter, customerId, productId } = req.query; // 'ALL', 'SALES', 'RETURNS'
 
         let whereClause = {
             companyId: parseInt(companyId)
         };
+
+        if (customerId) {
+            whereClause.customerId = parseInt(customerId);
+        }
+
+        if (productId) {
+            whereClause.invoiceitem = {
+                some: { productId: parseInt(productId) }
+            };
+        }
 
         if (startDate && endDate) {
             whereClause.date = {
@@ -395,7 +405,16 @@ const getSalesReport = async (req, res) => {
         const convertedSales = await Promise.all(salesReport.map(async inv => {
             const rate = await getConversionRate(inv.currency || 'USD', companyCurrency);
             const tol = 0.01;
-            const rawBal = Math.max(0, parseFloat(inv.balanceAmount || 0));
+
+            // Compute authoritative balance:
+            // paidAmount is kept up-to-date by syncInvoiceInDb on every payment.
+            // balanceAmount in DB may be stale — recompute from totalAmount - paidAmount.
+            const invTotal = parseFloat(inv.totalAmount || 0);
+            const invPaid = parseFloat(inv.paidAmount || 0);
+            const computedBal = Math.max(0, invTotal - invPaid);
+            // Use stored balanceAmount only if paidAmount is 0 (no payments recorded yet)
+            // Otherwise trust the computed value since paidAmount is authoritative.
+            const rawBal = invPaid > tol ? computedBal : Math.max(0, parseFloat(inv.balanceAmount || computedBal));
             const rawStatus = inv.status || 'UNPAID';
 
             // Recalculate status: promote PARTIAL -> OVERDUE if due date has passed and balance remains
@@ -404,6 +423,8 @@ const getSalesReport = async (req, res) => {
                 const duePassed = isDuePassed(inv.dueDate || inv.date);
                 if (rawBal > tol && duePassed) {
                     liveStatus = 'OVERDUE';
+                } else if (rawBal <= tol) {
+                    liveStatus = 'PAID';
                 } else if (rawStatus === 'PARTIAL') {
                     liveStatus = 'PARTIALLY PAID';
                 }
@@ -418,8 +439,8 @@ const getSalesReport = async (req, res) => {
                 subtotal: inv.subtotal * rate,
                 discountAmount: inv.discountAmount * rate,
                 taxAmount: inv.taxAmount * rate,
-                totalAmount: inv.totalAmount * rate,
-                paidAmount: inv.paidAmount * rate,
+                totalAmount: invTotal * rate,
+                paidAmount: invPaid * rate,
                 balanceAmount: rawBal * rate,
                 invoiceitem: inv.invoiceitem.map(item => ({
                     ...item,
@@ -805,18 +826,27 @@ const getPurchaseReport = async (req, res) => {
 
         // Convert to Base Currency
         const companyCurrency = await getCompanyCurrency(companyId);
+        const now = new Date();
         const convertedPurchaseBills = await Promise.all(purchaseReport.map(async bill => {
             const rate = await getConversionRate(bill.currency || 'USD', companyCurrency);
+            const total = (bill.totalAmount || 0) * rate;
+            const bal = (bill.balanceAmount || 0) * rate;
+            const paid = ((bill.totalAmount || 0) - (bill.balanceAmount || 0)) * rate;
+            const due = bill.dueDate ? new Date(bill.dueDate) : (bill.date ? new Date(bill.date) : null);
+            const isDuePassed = due ? (due < now) : false;
+            const isOverdue = isDuePassed && bal > 0.01 && bill.status !== 'CANCELLED' && bill.status !== 'PAID';
             return {
                 ...bill,
                 type: 'PURCHASE',
                 isReturn: false,
+                isOverdue,
+                status: isOverdue ? 'OVERDUE' : (bal <= 0.01 ? 'PAID' : (paid > 0.01 ? 'PARTIAL' : bill.status)),
                 subtotal: (bill.subtotal || 0) * rate,
                 discountAmount: (bill.discountAmount || 0) * rate,
                 taxAmount: (bill.taxAmount || 0) * rate,
-                totalAmount: (bill.totalAmount || 0) * rate,
-                paidAmount: ((bill.totalAmount || 0) - (bill.balanceAmount || 0)) * rate,
-                balanceAmount: (bill.balanceAmount || 0) * rate,
+                totalAmount: total,
+                paidAmount: paid,
+                balanceAmount: bal,
                 purchasebillitem: bill.purchasebillitem.map(item => ({
                     ...item,
                     rate: (item.rate || 0) * rate,
@@ -857,7 +887,6 @@ const getPurchaseReport = async (req, res) => {
         const combinedData = [...convertedPurchaseBills, ...convertedReturns].sort((a, b) => new Date(b.date) - new Date(a.date));
 
         // Calculate Summary Stats
-        const now = new Date();
         const summary = {
             totalPurchases: 0,
             totalReturns: 0,
@@ -1060,16 +1089,58 @@ const getPosReport = async (req, res) => {
         const companyCurrency = await getCompanyCurrency(companyId);
         const histCurr = await getCompanyHistoricalCurrency(companyId);
 
+        // Fetch overdue invoices last 365 days to sync overdue statuses accurately
+        let overduePosIds = new Set();
+        let posOverdueList = [];
+        try {
+            const overdueData = await getOverdueInvoicesLast365Days(companyId);
+            if (overdueData && Array.isArray(overdueData.invoices)) {
+                posOverdueList = overdueData.invoices.filter(inv => inv.type === 'POS_INVOICE' || inv.source === 'POS');
+                posOverdueList.forEach(inv => {
+                    overduePosIds.add(String(inv.id));
+                    overduePosIds.add(String(inv.invoiceId));
+                    overduePosIds.add(String(inv.invoiceNumber));
+                });
+            }
+        } catch (e) {
+            console.warn("Could not fetch overdue data in getPosReport:", e.message);
+        }
+
+        const now = new Date();
         const convertedSales = [];
+        let overduePosAmount = 0;
+        let overduePosCount = 0;
+
         for (const inv of posReport) {
             const rate = await getConversionRate(inv.currency || histCurr, companyCurrency);
+            const total = (inv.totalAmount || 0) * rate;
+            const rawBal = (inv.balanceAmount !== undefined && inv.balanceAmount !== null)
+                ? (inv.balanceAmount * rate)
+                : Math.max(0, total - ((inv.paidAmount || 0) * rate));
+            const bal = Math.max(0, Math.min(rawBal, total));
+            const paid = Math.max(0, total - bal);
+
+            const due = inv.dueDate ? new Date(inv.dueDate) : (inv.date ? new Date(inv.date) : (inv.createdAt ? new Date(inv.createdAt) : null));
+            const duePassed = isDuePassed(due);
+            const isOverdue = overduePosIds.has(String(inv.id)) ||
+                overduePosIds.has(String(inv.invoiceNumber)) ||
+                String(inv.status).toUpperCase() === 'OVERDUE' ||
+                (duePassed && bal > 0.01 && String(inv.status).toUpperCase() !== 'PAID' && String(inv.status).toUpperCase() !== 'CANCELLED');
+
+            if (isOverdue) {
+                overduePosAmount += bal;
+                overduePosCount += 1;
+            }
+
             convertedSales.push({
                 ...inv,
                 type: 'SALE',
                 isReturn: false,
-                totalAmount: (inv.totalAmount || 0) * rate,
-                paidAmount: (inv.paidAmount || 0) * rate,
-                balanceAmount: (inv.balanceAmount || 0) * rate,
+                isOverdue,
+                status: isOverdue ? 'OVERDUE' : (bal <= 0.01 ? 'PAID' : (paid > 0.01 ? 'PARTIAL' : inv.status)),
+                totalAmount: total,
+                paidAmount: paid,
+                balanceAmount: bal,
                 taxAmount: (inv.taxAmount || 0) * rate,
                 posinvoiceitem: (inv.posinvoiceitem || []).map(item => ({
                     ...item,
@@ -1112,7 +1183,10 @@ const getPosReport = async (req, res) => {
         const summary = {
             totalSales: 0,
             totalReturns: 0,
+            totalPaid: 0,
             netSales: 0,
+            overdue: Math.round(overduePosAmount * 100) / 100,
+            overdueCount: overduePosCount,
             totalCash: 0,
             totalCard: 0,
             totalUPI: 0,
@@ -1121,7 +1195,9 @@ const getPosReport = async (req, res) => {
 
         convertedSales.forEach(inv => {
             const total = inv.totalAmount || 0;
+            const paid = inv.paidAmount || 0;
             summary.totalSales += total;
+            summary.totalPaid += paid;
             const mode = (inv.paymentMode || 'CASH').toUpperCase();
             if (mode === 'CASH') summary.totalCash += total;
             else if (mode === 'CARD') summary.totalCard += total;
@@ -1133,9 +1209,9 @@ const getPosReport = async (req, res) => {
             summary.totalReturns += ret.totalAmount || 0;
         });
 
-        summary.netSales = summary.totalSales - summary.totalReturns;
+        summary.netSales = summary.totalPaid;
 
-        res.status(200).json({ success: true, data: combinedData, summary });
+        res.status(200).json({ success: true, data: combinedData, summary, overdueInvoices: posOverdueList });
     } catch (error) {
         console.error('Error fetching POS report:', error);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -1739,9 +1815,9 @@ const getBalanceSheet = async (req, res) => {
         const currentInventoryValue = (await calculateInventoryValue(companyId)) * rate;
 
         ledgers.forEach(ledger => {
-            //  if (ledger.name.toLowerCase().includes('opening balance equity')) {
-            //     return;
-            // }
+            const isOBE = ledger.name.toLowerCase().includes('opening balance equity') || ledger.name.toLowerCase() === 'obe';
+            if (isOBE) return; // Dynamic balancing OBE will be calculated below
+
             const groupType = ledger.accountgroup?.type;
             const opening = (ledger.openingBalance || 0) * rate;
 
@@ -1773,7 +1849,13 @@ const getBalanceSheet = async (req, res) => {
                     'inventory',
                     'advance',
                     'deposit',
-                    'prepaid'
+                    'prepaid',
+                    'tax',
+                    'gst',
+                    'vat',
+                    'input',
+                    'tds',
+                    'tcs'
                 ];
                 // Force customer ledgers or ledgers with current keywords into Current Assets
                 const isCurrent = currentAssetKeywords.some(s => groupName.includes(s) || name.toLowerCase().includes(s)) || ledger.customerId !== null;
@@ -1798,7 +1880,10 @@ const getBalanceSheet = async (req, res) => {
                     'overdraft',
                     'short-term',
                     'salary',
-                    'expense payable'
+                    'expense payable',
+                    'gst',
+                    'output',
+                    'vat'
                 ];
                 // Force vendor ledgers or current liability keywords into Current Liabilities
                 const isCurrent = currentLiabilityKeywords.some(s => groupName.includes(s) || name.toLowerCase().includes(s)) || ledger.vendorId !== null;
@@ -1824,8 +1909,7 @@ const getBalanceSheet = async (req, res) => {
 
         // 2. Calculate Net Profit/Loss
         // Since COGS is already calculated on every invoice, P&L Net Profit is simply Income - Expense.
-        // We do NOT add currentInventoryValue here to avoid double counting stock as direct profit.
-        const finalNetProfit = totalIncome - totalExpense;
+        const finalNetProfit = Math.round((totalIncome - totalExpense) * 100) / 100;
         reportData.netProfit = finalNetProfit;
 
         // Add Net Profit to Equity
@@ -1836,45 +1920,24 @@ const getBalanceSheet = async (req, res) => {
         });
         reportData.equity.total += finalNetProfit;
 
-        // 4. Legitimate Opening Balance Equity & Discrepancy Detection
-        const hasExplicitObeLedger = reportData.equity.items.some(item => {
-            const n = (item.name || '').toLowerCase();
-            return n.includes('opening balance equity') || n === 'obe';
-        });
-
-        // If no explicit OBE ledger exists, compute legitimate setup OBE from initial setup opening balances
-        if (!hasExplicitObeLedger) {
-            let assetOpenSum = 0;
-            let liabilityOpenSum = 0;
-            let equityOpenSum = 0;
-
-            ledgers.forEach(l => {
-                const open = (parseFloat(l.openingBalance || 0)) * rate;
-                const gType = l.accountgroup?.type;
-                if (gType === 'ASSETS') assetOpenSum += open;
-                else if (gType === 'LIABILITIES') liabilityOpenSum += open;
-                else if (gType === 'EQUITY') equityOpenSum += open;
-            });
-
-            const setupOBE = assetOpenSum - liabilityOpenSum - equityOpenSum;
-            if (Math.abs(setupOBE) > 0.001) {
-                reportData.equity.items.push({
-                    name: 'Opening Balance Equity',
-                    value: setupOBE
-                });
-                reportData.equity.total += setupOBE;
-            }
-        }
-
-        // Calculate total sums for Assets, Liabilities, and Equity
+        // Calculate total sums for Assets and Liabilities
         reportData.assets.total = reportData.assets.current.reduce((sum, item) => sum + item.value, 0) + reportData.assets.fixed.reduce((sum, item) => sum + item.value, 0);
         reportData.liabilities.total = reportData.liabilities.current.reduce((sum, item) => sum + item.value, 0) + reportData.liabilities.longTerm.reduce((sum, item) => sum + item.value, 0);
+        const currentEquitySum = reportData.equity.items.reduce((sum, item) => sum + item.value, 0);
+
+        // 4. Dynamic Balancing Opening Balance Equity
+        // In standard accounting, OBE balances the balance sheet: Total Assets = Total Liabilities + Total Equity
+        const dynamicOBE = Math.round((reportData.assets.total - (reportData.liabilities.total + currentEquitySum)) * 100) / 100;
+        if (Math.abs(dynamicOBE) > 0.001) {
+            reportData.equity.items.unshift({
+                name: 'Opening Balance Equity',
+                value: dynamicOBE
+            });
+        }
         reportData.equity.total = reportData.equity.items.reduce((sum, item) => sum + item.value, 0);
 
         // Calculate imbalance / posting discrepancy
-        // Assets = Liabilities + Total Equity
         const discrepancy = reportData.assets.total - (reportData.liabilities.total + reportData.equity.total);
-
         reportData.discrepancy = Math.abs(discrepancy) > 0.01 ? Math.round(discrepancy * 100) / 100 : 0;
 
         if (Math.abs(discrepancy) > 0.01) {
@@ -1916,36 +1979,36 @@ const getCashFlowStatement = async (req, res) => {
         });
 
         const cashBankLedgerIds = new Set(cashBankLedgers.map(l => l.id));
+        const cbIdList = Array.from(cashBankLedgerIds);
 
         // Calculate Opening Cash Balance before Jan 1 of the target year
         let openingCash = 0;
         for (const ledger of cashBankLedgers) {
             const isDebit = ledger.accountgroup?.type === 'ASSETS' || ledger.accountgroup?.type === 'EXPENSES';
-            const ob = (ledger.openingBalance || 0) * (isDebit ? 1 : -1);
-
-            // Fetch receipts prior to start of year for this bank account
-            const priorReceipts = await prisma.receipt.aggregate({
-                where: {
-                    cashBankAccountId: ledger.id,
-                    date: { lt: new Date(`${year}-01-01`) },
-                    companyId: parseInt(companyId)
-                },
-                _sum: { amount: true }
-            });
-
-            // Fetch payments prior to start of year for this bank account
-            const priorPayments = await prisma.payment.aggregate({
-                where: {
-                    cashBankAccountId: ledger.id,
-                    date: { lt: new Date(`${year}-01-01`) },
-                    companyId: parseInt(companyId)
-                },
-                _sum: { amount: true }
-            });
-
-            const netPrior = (priorReceipts._sum.amount || 0) - (priorPayments._sum.amount || 0);
-            openingCash += (ob + netPrior);
+            openingCash += (ledger.openingBalance || 0) * (isDebit ? 1 : -1);
         }
+
+        // Prior transactions before start of target year
+        const priorTxns = await prisma.transaction.findMany({
+            where: {
+                companyId: parseInt(companyId),
+                date: { lt: new Date(`${year}-01-01T00:00:00.000Z`) },
+                OR: [
+                    { debitLedgerId: { in: cbIdList } },
+                    { creditLedgerId: { in: cbIdList } }
+                ]
+            }
+        });
+
+        priorTxns.forEach(tx => {
+            const amt = parseFloat(tx.amount || 0);
+            const isDebit = cashBankLedgerIds.has(tx.debitLedgerId);
+            const isCredit = cashBankLedgerIds.has(tx.creditLedgerId);
+            if (isDebit && !isCredit) openingCash += amt;
+            else if (!isDebit && isCredit) openingCash -= amt;
+        });
+
+        openingCash = Math.round(openingCash * 100) / 100;
 
         // Initialize 12-month activity trackers
         const operatingInflows = Array(12).fill(0);
@@ -1959,73 +2022,70 @@ const getCashFlowStatement = async (req, res) => {
         const receiptsArr = Array(12).fill(0);
         const paymentsArr = Array(12).fill(0);
 
-        // 1. Process Receipts (Cash Inflows)
-        const receipts = await prisma.receipt.findMany({
+        // Fetch all cash and bank transactions for the year
+        const yearTxns = await prisma.transaction.findMany({
             where: {
                 companyId: parseInt(companyId),
                 date: {
-                    gte: new Date(`${year}-01-01`),
+                    gte: new Date(`${year}-01-01T00:00:00.000Z`),
                     lte: toEndOfDay(`${year}-12-31`)
-                }
+                },
+                OR: [
+                    { debitLedgerId: { in: cbIdList } },
+                    { creditLedgerId: { in: cbIdList } }
+                ]
             },
-            include: { cashBankAccount: { include: { accountgroup: true } } }
-        });
-
-        for (const item of receipts) {
-            const d = new Date(item.date);
-            const month = d.getMonth();
-            const rate = await getConversionRate(item.currency || 'USD', companyCurrency);
-            const val = (item.amount || 0) * rate;
-
-            receiptsArr[month] += val;
-
-            const groupName = item.cashBankAccount?.accountgroup?.name?.toLowerCase() || '';
-            const groupType = item.cashBankAccount?.accountgroup?.type || '';
-
-            if (groupType === 'LIABILITIES' && (groupName.includes('loan') || groupName.includes('borrowing'))) {
-                financingInflows[month] += val;
-            } else if (groupType === 'EQUITY' || groupName.includes('capital') || groupName.includes('equity')) {
-                financingInflows[month] += val;
-            } else if (groupType === 'ASSETS' && (groupName.includes('fixed') || groupName.includes('property') || groupName.includes('equipment'))) {
-                investingInflows[month] += val;
-            } else {
-                // Default: Operating Customer / Revenue Receipt
-                operatingInflows[month] += val;
+            include: {
+                ledger_transaction_debitLedgerIdToledger: { include: { accountgroup: true } },
+                ledger_transaction_creditLedgerIdToledger: { include: { accountgroup: true } }
             }
-        }
-
-        // 2. Process Payments (Cash Outflows)
-        const payments = await prisma.payment.findMany({
-            where: {
-                companyId: parseInt(companyId),
-                date: {
-                    gte: new Date(`${year}-01-01`),
-                    lte: toEndOfDay(`${year}-12-31`)
-                }
-            },
-            include: { bankLedger: { include: { accountgroup: true } } }
         });
 
-        for (const item of payments) {
-            const d = new Date(item.date);
-            const month = d.getMonth();
-            const rate = await getConversionRate(item.currency || 'USD', companyCurrency);
-            const val = (item.amount || 0) * rate;
+        for (const tx of yearTxns) {
+            const amt = parseFloat(tx.amount || 0);
+            if (amt <= 0) return;
 
-            paymentsArr[month] += val;
+            const month = new Date(tx.date).getMonth();
+            const isDebit = cashBankLedgerIds.has(tx.debitLedgerId);
+            const isCredit = cashBankLedgerIds.has(tx.creditLedgerId);
 
-            const groupName = item.bankLedger?.accountgroup?.name?.toLowerCase() || '';
-            const groupType = item.bankLedger?.accountgroup?.type || '';
+            // Skip internal transfers / contra between cash & bank
+            if (isDebit && isCredit) continue;
 
-            if (groupType === 'ASSETS' && (groupName.includes('fixed') || groupName.includes('property') || groupName.includes('equipment') || groupName.includes('machinery') || groupName.includes('vehicle'))) {
-                investingOutflows[month] += val;
-            } else if (groupType === 'LIABILITIES' && (groupName.includes('loan') || groupName.includes('borrowing') || groupName.includes('debt'))) {
-                financingOutflows[month] += val;
-            } else if (groupType === 'EQUITY' || groupName.includes('drawing') || groupName.includes('dividend')) {
-                financingOutflows[month] += val;
-            } else {
-                // Default: Operating Supplier / Expense Payment
-                operatingOutflows[month] += val;
+            if (isDebit) {
+                // Inflow into cash/bank
+                receiptsArr[month] += amt;
+                const other = tx.ledger_transaction_creditLedgerIdToledger;
+                const gType = other?.accountgroup?.type || '';
+                const gName = (other?.accountgroup?.name || '').toLowerCase();
+                const lName = (other?.name || '').toLowerCase();
+
+                if (gType === 'EQUITY' || gName.includes('capital') || lName.includes('capital')) {
+                    financingInflows[month] += amt;
+                } else if (gType === 'LIABILITIES' && (gName.includes('loan') || lName.includes('loan') || gName.includes('borrowing'))) {
+                    financingInflows[month] += amt;
+                } else if (gType === 'ASSETS' && (gName.includes('fixed') || lName.includes('fixed') || gName.includes('equipment') || gName.includes('machinery'))) {
+                    investingInflows[month] += amt;
+                } else {
+                    operatingInflows[month] += amt;
+                }
+            } else if (isCredit) {
+                // Outflow from cash/bank
+                paymentsArr[month] += amt;
+                const other = tx.ledger_transaction_debitLedgerIdToledger;
+                const gType = other?.accountgroup?.type || '';
+                const gName = (other?.accountgroup?.name || '').toLowerCase();
+                const lName = (other?.name || '').toLowerCase();
+
+                if (gType === 'EQUITY' || gName.includes('drawing') || lName.includes('dividend') || lName.includes('drawing')) {
+                    financingOutflows[month] += amt;
+                } else if (gType === 'LIABILITIES' && (gName.includes('loan') || lName.includes('loan') || gName.includes('borrowing') || gName.includes('debt'))) {
+                    financingOutflows[month] += amt;
+                } else if (gType === 'ASSETS' && (gName.includes('fixed') || lName.includes('fixed') || gName.includes('equipment') || gName.includes('machinery') || gName.includes('vehicle'))) {
+                    investingOutflows[month] += amt;
+                } else {
+                    operatingOutflows[month] += amt;
+                }
             }
         }
 
@@ -4285,12 +4345,10 @@ const getDepartmentalPnL = async (req, res) => {
             }
 
             for (const bill of bills) {
-                const rate = await getRate(bill.currency);
                 for (const item of (bill.purchasebillitem || [])) {
                     const whId = item.warehouseId || 'unassigned';
-                    const cost = parseFloat(item.amount || item.total || 0) * rate;
                     if (whMap[whId]) {
-                        whMap[whId].cogs += cost;
+                        whMap[whId].docCount++;
                     }
                 }
             }
@@ -4399,9 +4457,7 @@ const getDepartmentalPnL = async (req, res) => {
 
             // 3. Purchase Bills
             for (const bill of bills) {
-                const rate = await getRate(bill.currency);
-                const billCost = parseFloat(bill.subtotal || bill.totalAmount || 0) * rate;
-                operationalDepts['Purchasing & Procurement'].cogs += billCost;
+                // Track procurement document count without inflating COGS (COGS is already captured upon sale)
                 operationalDepts['Purchasing & Procurement'].docCount++;
             }
 
@@ -4409,19 +4465,32 @@ const getDepartmentalPnL = async (req, res) => {
             transactions.forEach(tx => {
                 const amt = parseFloat(tx.amount || 0);
                 if (amt <= 0) return;
-                if (tx.voucherType === 'SALES' || tx.voucherType === 'PURCHASE') return;
 
                 const debitGroup = tx.ledger_transaction_debitLedgerIdToledger?.accountgroup?.type || '';
                 const creditGroup = tx.ledger_transaction_creditLedgerIdToledger?.accountgroup?.type || '';
                 const debitName = (tx.ledger_transaction_debitLedgerIdToledger?.name || '').toLowerCase();
+                const creditName = (tx.ledger_transaction_creditLedgerIdToledger?.name || '').toLowerCase();
                 const narration = (tx.narration || '').toLowerCase();
 
-                const isFinance = debitName.includes('bank') || debitName.includes('interest') || debitName.includes('fee') || debitName.includes('charge') || narration.includes('bank') || narration.includes('interest');
-                const targetDept = isFinance ? 'Finance & Treasury' : 'General & Administration';
+                // Skip COGS ledger debits because COGS is already calculated per invoice above
+                const isCogs = debitName.includes('cost of goods') || tx.voucherNumber?.startsWith('COGS') || narration.includes('cogs');
+                if (isCogs) return;
+
+                // Skip Sales revenue ledger credits because sales revenue is already counted per invoice above
+                const isSales = creditName.includes('sales revenue') || creditName.includes('sales income') || tx.voucherType === 'SALES';
+
+                const isFinance = debitName.includes('bank') || debitName.includes('interest') || debitName.includes('foreign exchange') || creditName.includes('foreign exchange') || narration.includes('bank');
+                const isPurchasing = creditName.includes('discount received') || narration.includes('purchase');
+
+                let targetDept = 'General & Administration';
+                if (isFinance) targetDept = 'Finance & Treasury';
+                else if (isPurchasing) targetDept = 'Purchasing & Procurement';
 
                 if (creditGroup === 'INCOME') {
-                    operationalDepts[targetDept].revenue += amt;
-                    operationalDepts[targetDept].docCount++;
+                    if (!isSales) {
+                        operationalDepts[targetDept].revenue += amt;
+                        operationalDepts[targetDept].docCount++;
+                    }
                 } else if (debitGroup === 'EXPENSES') {
                     operationalDepts[targetDept].expenses += amt;
                     operationalDepts[targetDept].docCount++;

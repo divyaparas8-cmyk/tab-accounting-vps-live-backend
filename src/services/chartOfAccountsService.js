@@ -180,13 +180,18 @@ const calculateDynamicLedgerBalances = async (companyId, inventoryValue) => {
             const txnCredit = creditMap.get(l.id) || 0;
 
             let dynamicBalance;
-            if (isRetainedEarnings) {
+            if (isRetainedEarnings || isOBE) {
                 dynamicBalance = 0; // Will be set after totals
+            } else if (isInventory && inventoryValue !== undefined && inventoryValue !== null) {
+                dynamicBalance = inventoryValue;
             } else if (['ASSETS', 'EXPENSES'].includes(groupType)) {
                 dynamicBalance = opening + txnDebit - txnCredit;
             } else {
                 dynamicBalance = opening + txnCredit - txnDebit;
             }
+
+            // Round to 2 decimals to eliminate floating-point precision dust
+            dynamicBalance = Math.round(dynamicBalance * 100) / 100;
 
             balanceMap.set(l.id, {
                 ledger: l,
@@ -206,17 +211,24 @@ const calculateDynamicLedgerBalances = async (companyId, inventoryValue) => {
             }
         });
 
-        // Calculate dynamic profit/loss and set Retained Earnings
-        const netProfit = totalIncome - totalExpenses;
+        // Calculate dynamic profit/loss and set Retained Earnings (Opening + Prior Txns + Current Net Profit)
+        const netProfit = Math.round((totalIncome - totalExpenses) * 100) / 100;
         const reLedger = ledgers.find(l => l.name.toLowerCase().includes('retained earnings'));
+        const reOpening = reLedger ? (reLedger.openingBalance || 0) * rate : 0;
         const reTxnDebit = reLedger ? (debitMap.get(reLedger.id) || 0) : 0;
         const reTxnCredit = reLedger ? (creditMap.get(reLedger.id) || 0) : 0;
-        const dynamicRetainedEarnings = reTxnCredit - reTxnDebit + netProfit;
+        const dynamicRetainedEarnings = Math.round((reOpening + reTxnCredit - reTxnDebit + netProfit) * 100) / 100;
 
-        // Apply Retained Earnings values back into the map
+        // Dynamic Opening Balance Equity balances the balance sheet (Total Assets = Total Liabilities + Total Equity)
+        const dynamicOBE = Math.round((totalAssets - (totalLiabilities + totalOtherEquity + dynamicRetainedEarnings)) * 100) / 100;
+
+        // Apply Retained Earnings and OBE values back into the map
         for (const [id, entry] of balanceMap) {
             if (entry.isRetainedEarnings) {
                 entry.dynamicBalance = dynamicRetainedEarnings;
+            }
+            if (entry.isOBE) {
+                entry.dynamicBalance = dynamicOBE;
             }
         }
 
