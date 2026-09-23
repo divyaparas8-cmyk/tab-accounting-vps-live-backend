@@ -123,8 +123,8 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
                 if (rawStatus === 'CANCELLED') return 'CANCELLED';
                 if (effectiveBalance <= tol && (totalNum > 0 || paidNum >= totalNum - tol)) return 'PAID';
                 if (effectiveBalance <= tol && totalNum === 0) return 'PAID';
-                if (paidNum > 0 && effectiveBalance > tol) return 'PARTIALLY PAID';
                 if (effectiveBalance > tol && isDuePassed) return 'OVERDUE';
+                if (paidNum > 0 && effectiveBalance > tol) return 'PARTIALLY PAID';
                 if (rawStatus && rawStatus !== 'UNPAID' && rawStatus !== 'DUE' && rawStatus !== 'PARTIAL') return rawStatus;
                 return 'UNPAID';
             })();
@@ -461,6 +461,65 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
                 bankInfo += `Reference: ${invoiceNumber}`;
                 doc.text(bankInfo, 50, y + 18, { width: 495, lineGap: 2 });
                 y += 56;
+            }
+
+            // For combined invoices, add Invoices Included summary table
+            if (isCombinedInv && Array.isArray(invoice?.invoices) && invoice.invoices.length > 0) {
+                if (y + 60 + (invoice.invoices.length * 18) > 750) {
+                    doc.addPage();
+                    y = 50;
+                } else {
+                    y += 10;
+                }
+
+                doc.fontSize(8.5).font('Helvetica-Bold').fillColor(sectionTitleColor).text('INVOICES INCLUDED IN THIS STATEMENT', 40, y);
+                y += 12;
+
+                doc.rect(40, y, 515, 18).fill(tableHeaderBg);
+                doc.fillColor(tableHeaderText).font('Helvetica-Bold').fontSize(7.5);
+                doc.text('Invoice #', 45, y + 5, { width: 90, align: 'left' });
+                doc.text('Date', 140, y + 5, { width: 75, align: 'left' });
+                doc.text('Total', 220, y + 5, { width: 85, align: 'right' });
+                doc.text('Paid', 310, y + 5, { width: 75, align: 'right' });
+                doc.text('Balance Due', 390, y + 5, { width: 80, align: 'right' });
+                doc.text('Status', 475, y + 5, { width: 75, align: 'center' });
+                y += 18;
+
+                invoice.invoices.forEach((ci, ciIdx) => {
+                    if (y + 16 > 750) {
+                        doc.addPage();
+                        y = 50;
+                        doc.rect(40, y, 515, 18).fill(tableHeaderBg);
+                        doc.fillColor(tableHeaderText).font('Helvetica-Bold').fontSize(7.5);
+                        doc.text('Invoice #', 45, y + 5, { width: 90, align: 'left' });
+                        doc.text('Date', 140, y + 5, { width: 75, align: 'left' });
+                        doc.text('Total', 220, y + 5, { width: 85, align: 'right' });
+                        doc.text('Paid', 310, y + 5, { width: 75, align: 'right' });
+                        doc.text('Balance Due', 390, y + 5, { width: 80, align: 'right' });
+                        doc.text('Status', 475, y + 5, { width: 75, align: 'center' });
+                        y += 18;
+                    }
+
+                    const rowBg = ciIdx % 2 === 0 ? '#ffffff' : '#f8fafc';
+                    doc.rect(40, y, 515, 16).fill(rowBg);
+
+                    const d = ci.date ? new Date(ci.date) : null;
+                    const dateStr = d && !isNaN(d.getTime())
+                        ? `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+                        : '-';
+
+                    doc.fillColor('#334155').font('Helvetica-Bold').fontSize(7.5);
+                    doc.text(ci.invoiceNumber || `INV-${ci.id}`, 45, y + 4, { width: 90, align: 'left' });
+                    doc.font('Helvetica').fillColor('#334155').text(dateStr, 140, y + 4, { width: 75, align: 'left' });
+                    doc.text(`${currency} ${Number(ci.totalAmount || 0).toFixed(2)}`, 220, y + 4, { width: 85, align: 'right' });
+                    doc.text(`${currency} ${Number(ci.paidAmount || 0).toFixed(2)}`, 310, y + 4, { width: 75, align: 'right' });
+                    doc.font('Helvetica-Bold').text(`${currency} ${Number(ci.balanceAmount || 0).toFixed(2)}`, 390, y + 4, { width: 80, align: 'right' });
+                    doc.font('Helvetica').text(ci.status || 'UNPAID', 475, y + 4, { width: 75, align: 'center' });
+
+                    doc.moveTo(40, y + 16).lineTo(555, y + 16).strokeColor('#e2e8f0').lineWidth(0.5).stroke();
+                    y += 16;
+                });
+                y += 10;
             }
 
             /* // ── Payment History Table at bottom (commented out) ──

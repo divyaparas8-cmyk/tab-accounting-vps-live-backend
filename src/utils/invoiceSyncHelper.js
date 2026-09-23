@@ -40,19 +40,30 @@ const isDuePassed = (dueDate) => {
  * - Otherwise -> UNPAID
  * - Never mark an invoice PAID while balance > tolerance.
  */
-const computeInvoiceStatusAndBalance = (invoice, paymentsReceived = null, tolerance = null) => {
+/**
+ * Computes paid amount, outstanding balance, and status based on authoritative rules:
+ * - Net Total = max(0, Invoice Total - Total Returns)
+ * - Outstanding Balance = max(0, Net Total - Total Payments Received)
+ * - If balance <= tolerance AND (netTotal > 0 OR paid >= netTotal - tolerance) -> PAID
+ * - If paid > tolerance AND balance > tolerance -> PARTIAL (displayed as PARTIALLY PAID)
+ * - If balance <= tolerance AND netTotal == 0 AND paid == 0 -> PAID
+ * - Otherwise -> UNPAID
+ * - Never mark an invoice PAID while balance > tolerance.
+ */
+const computeInvoiceStatusAndBalance = (invoice, paymentsReceived = null, tolerance = null, returnedAmount = 0) => {
     if (!invoice) return invoice;
 
     const decimals = getDecimalPlaces(invoice.currency);
     const tol = tolerance !== null ? tolerance : (decimals === 3 ? 0.001 : 0.01);
 
-    const total = roundTo(invoice.totalAmount || 0, decimals);
+    const originalTotal = roundTo(invoice.totalAmount || 0, decimals);
+    const netTotal = Math.max(0, roundTo(originalTotal - (parseFloat(returnedAmount) || 0), decimals));
     const paid = paymentsReceived !== null 
         ? roundTo(paymentsReceived, decimals) 
         : roundTo(invoice.paidAmount || 0, decimals);
     
     // Balance cannot be negative
-    const balance = Math.max(0, roundTo(total - paid, decimals));
+    const balance = Math.max(0, roundTo(netTotal - paid, decimals));
 
     const isPos = invoice.type === 'POS_INVOICE' || !!invoice.posinvoiceitem;
     const duePassed = isDuePassed(invoice.dueDate || invoice.date);
@@ -63,28 +74,29 @@ const computeInvoiceStatusAndBalance = (invoice, paymentsReceived = null, tolera
     if (invoice.status === 'CANCELLED' || invoice.status === 'Cancelled') {
         computedStatus = isPos ? 'Cancelled' : 'CANCELLED';
         displayStatus = computedStatus;
-    } else if (paid > total + tol) {
+    } else if (paid > netTotal + tol) {
         // Genuine overpayment: fully settled, with credit balance
         computedStatus = isPos ? 'Paid' : 'PAID';
         displayStatus = 'OVERPAID';
-    } else if (balance <= tol && (total > 0 || paid >= total - tol)) {
+    } else if (balance <= tol && (netTotal > 0 || paid >= netTotal - tol)) {
         computedStatus = isPos ? 'Paid' : 'PAID';
         displayStatus = computedStatus;
-    } else if (paid > tol && balance > tol) {
-        computedStatus = isPos ? 'Partial' : 'PARTIAL';
-        displayStatus = isPos ? 'Partially Paid' : 'PARTIALLY PAID';
-    } else if (balance <= tol && total === 0 && paid === 0) {
+    } else if (balance <= tol && netTotal === 0 && paid === 0) {
         computedStatus = isPos ? 'Paid' : 'PAID';
         displayStatus = computedStatus;
     } else if (balance > tol && duePassed) {
         computedStatus = isPos ? 'Overdue' : 'OVERDUE';
         displayStatus = computedStatus;
+    } else if (paid > tol && balance > tol) {
+        computedStatus = isPos ? 'Partial' : 'PARTIAL';
+        displayStatus = isPos ? 'Partially Paid' : 'PARTIALLY PAID';
     } else {
         computedStatus = isPos ? 'Due' : 'UNPAID';
         displayStatus = computedStatus;
     }
 
     return {
+        netTotal,
         paidAmount: paid,
         balanceAmount: balance,
         status: computedStatus,
@@ -95,6 +107,7 @@ const computeInvoiceStatusAndBalance = (invoice, paymentsReceived = null, tolera
 /**
  * Syncs an invoice in the database:
  * Calculates total payments received from all allocations or applies delta,
+ * incorporates advance adjustments and sales returns,
  * calculates outstanding balance and status, and updates the database record.
  */
 const syncInvoiceInDb = async (txOrPrisma, invoiceId, type = 'TAX_INVOICE', deltaPaid = null) => {
@@ -133,34 +146,70 @@ const syncInvoiceInDb = async (txOrPrisma, invoiceId, type = 'TAX_INVOICE', delt
         const inv = await txOrPrisma.invoice.findUnique({
             where: { id: parsedId },
             include: {
-                allocations: true
+                allocations: true,
+                advanceadjustments: true,
+                salesreturn: true
             }
         });
         if (!inv) return null;
 
         const decimals = getDecimalPlaces(inv.currency);
-        let paidAmount;
-        if (inv.allocations && inv.allocations.length > 0) {
-            // Authoritative: Calculate directly from active allocations
-            const totalAlloc = inv.allocations.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
-            paidAmount = roundTo(totalAlloc, decimals);
-        } else if (deltaPaid !== null) {
-            paidAmount = Math.max(0, roundTo((inv.paidAmount || 0) + deltaPaid, decimals));
+        const tol = decimals === 3 ? 0.001 : 0.01;
+
+        // Authoritative payments received:
+        let paidAmount = 0;
+        let hasDirectRecords = false;
+
+        // 1. Allocations from receipts
+        if (Array.isArray(inv.allocations) && inv.allocations.length > 0) {
+            hasDirectRecords = true;
+            paidAmount += inv.allocations.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
+        }
+
+        // 2. Advance adjustments (only add if not already linked via allocation receiptId)
+        if (Array.isArray(inv.advanceadjustments) && inv.advanceadjustments.length > 0) {
+            hasDirectRecords = true;
+            const seenReceiptIdsInAllocs = new Set((inv.allocations || []).map(a => a.receiptId).filter(Boolean));
+            inv.advanceadjustments.forEach(adj => {
+                if (!adj.receiptId || !seenReceiptIdsInAllocs.has(adj.receiptId)) {
+                    paidAmount += parseFloat(adj.amount || 0);
+                }
+            });
+        }
+
+        // 3. Fallbacks if no direct child allocation/advance records exist
+        if (!hasDirectRecords) {
+            if (deltaPaid !== null) {
+                paidAmount = Math.max(0, roundTo((inv.paidAmount || 0) + deltaPaid, decimals));
+            } else {
+                paidAmount = roundTo(inv.paidAmount || 0, decimals);
+            }
         } else {
-            paidAmount = roundTo(inv.paidAmount || 0, decimals);
+            paidAmount = roundTo(paidAmount, decimals);
+        }
+
+        // Authoritative returns:
+        let returnedTotal = 0;
+        if (Array.isArray(inv.salesreturn) && inv.salesreturn.length > 0) {
+            returnedTotal = inv.salesreturn.reduce((sum, ret) => {
+                if (ret.status === 'Rejected') return sum;
+                return sum + parseFloat(ret.totalAmount || 0);
+            }, 0);
+            returnedTotal = roundTo(returnedTotal, decimals);
         }
 
         const { balanceAmount, status } = computeInvoiceStatusAndBalance(
             inv,
             paidAmount,
-            decimals === 3 ? 0.001 : 0.01
+            tol,
+            returnedTotal
         );
 
-        // Map to valid MySQL DB enum
-        const dbStatus = (status === 'PARTIALLY PAID' || status === 'PARTIAL') ? 'PARTIAL' : status;
+        // Map to valid MySQL DB enum: UNPAID, PARTIAL, PAID, CANCELLED, COMPLETED, OVERDUE
+        const dbStatus = (status === 'PARTIALLY PAID' || status === 'PARTIAL' || status === 'Partial') ? 'PARTIAL' : status;
 
         return await txOrPrisma.invoice.update({
-            where: { id: parseInt(invoiceId) },
+            where: { id: parsedId },
             data: {
                 paidAmount,
                 balanceAmount,

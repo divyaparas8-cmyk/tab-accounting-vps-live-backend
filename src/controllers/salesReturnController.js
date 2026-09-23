@@ -1,7 +1,7 @@
 const prisma = require('../config/prisma');
 const numberingService = require('../services/numberingService');
 const { getConversionRate, getCompanyCurrency } = require('../utils/currencyConverter');
-const { isDuePassed } = require('../utils/invoiceSyncHelper');
+const { isDuePassed, syncInvoiceInDb } = require('../utils/invoiceSyncHelper');
 const { logActivity } = require('../utils/auditLogger');
 
 // Create Sales Return
@@ -210,30 +210,13 @@ const createReturn = async (req, res) => {
             if (invoiceId) {
                 if (isPosInvoice) {
                     isInvoicePaid = true; // POS is always paid immediately
-                    const newBalance = Math.max(0, posInvoice.balanceAmount - totalAmount);
-                    await tx.posinvoice.update({
-                        where: { id: posInvoice.id },
-                        data: {
-                            balanceAmount: newBalance,
-                            status: newBalance <= 0 ? 'Paid' : (isDuePassed(posInvoice.dueDate || posInvoice.date) ? 'Overdue' : (posInvoice.paidAmount > 0 ? 'Partial' : 'Due'))
-                        }
-                    });
+                    await syncInvoiceInDb(tx, posInvoice.id, 'POS_INVOICE');
                 } else {
                     const invoice = await tx.invoice.findUnique({ where: { id: parseInt(invoiceId) } });
-                    if (invoice) {
-                        if (invoice.status === 'PAID' || invoice.status === 'Paid' || invoice.paidAmount >= invoice.totalAmount) {
-                            isInvoicePaid = true;
-                        }
-                        const newBalance = Math.max(0, invoice.balanceAmount - totalAmount);
-
-                        await tx.invoice.update({
-                            where: { id: invoice.id },
-                            data: {
-                                balanceAmount: newBalance,
-                                status: newBalance <= 0 ? 'PAID' : (isDuePassed(invoice.dueDate) ? 'OVERDUE' : (invoice.paidAmount > 0 ? 'PARTIAL' : 'UNPAID'))
-                            }
-                        });
+                    if (invoice && (invoice.status === 'PAID' || invoice.status === 'Paid' || (invoice.totalAmount > 0 && invoice.paidAmount >= invoice.totalAmount))) {
+                        isInvoicePaid = true;
                     }
+                    await syncInvoiceInDb(tx, parseInt(invoiceId), 'TAX_INVOICE');
                 }
             }
             console.log("[createReturn] tx: Balance updates complete.");
@@ -858,29 +841,14 @@ const updateReturn = async (req, res) => {
             }
 
             // 6. Apply New Invoice Balance if linked
+            if (existing.invoiceId && (!invoiceId || parseInt(existing.invoiceId) !== parseInt(invoiceId))) {
+                await syncInvoiceInDb(tx, parseInt(existing.invoiceId), 'TAX_INVOICE');
+            }
             if (invoiceId) {
                 if (isPosInvoice) {
-                    const newBalance = Math.max(0, posInvoice.balanceAmount - totalAmount);
-                    await tx.posinvoice.update({
-                        where: { id: posInvoice.id },
-                        data: {
-                            balanceAmount: newBalance,
-                            status: newBalance <= 0 ? 'Paid' : (isDuePassed(posInvoice.dueDate || posInvoice.date) ? 'Overdue' : (posInvoice.paidAmount > 0 ? 'Partial' : 'Due'))
-                        }
-                    });
+                    await syncInvoiceInDb(tx, posInvoice.id, 'POS_INVOICE');
                 } else {
-                    const invoice = await tx.invoice.findUnique({ where: { id: parseInt(invoiceId) } });
-                    if (invoice) {
-                        const newBalance = Math.max(0, invoice.balanceAmount - totalAmount);
-
-                        await tx.invoice.update({
-                            where: { id: invoice.id },
-                            data: {
-                                balanceAmount: newBalance,
-                                status: newBalance <= 0 ? 'PAID' : (isDuePassed(invoice.dueDate) ? 'OVERDUE' : (invoice.paidAmount > 0 ? 'PARTIAL' : 'UNPAID'))
-                            }
-                        });
-                    }
+                    await syncInvoiceInDb(tx, parseInt(invoiceId), 'TAX_INVOICE');
                 }
             }
 
@@ -1407,6 +1375,10 @@ const deleteSalesReturnHelper = async (tx, salesReturn, companyId) => {
     await tx.salesreturn.delete({
         where: { id: salesReturn.id }
     });
+
+    if (salesReturn.invoiceId) {
+        await syncInvoiceInDb(tx, salesReturn.invoiceId, 'TAX_INVOICE');
+    }
 };
 
 module.exports = {

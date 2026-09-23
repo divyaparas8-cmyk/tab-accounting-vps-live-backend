@@ -329,12 +329,12 @@ const adjustInvoiceWithReturns = (invoice) => {
             adjustedStatus = isPos ? 'Paid' : 'PAID';
         } else if (adjustedBalance <= tol && (adjustedTotal > 0 || paidAmount >= adjustedTotal - tol)) {
             adjustedStatus = isPos ? 'Paid' : 'PAID';
-        } else if (paidAmount > tol && adjustedBalance > tol) {
-            adjustedStatus = 'PARTIALLY PAID';
         } else if (adjustedBalance <= tol && adjustedTotal === 0 && paidAmount === 0) {
             adjustedStatus = isPos ? 'Paid' : 'PAID';
         } else if (adjustedBalance > tol && duePassed) {
             adjustedStatus = isPos ? 'Overdue' : 'OVERDUE';
+        } else if (paidAmount > tol && adjustedBalance > tol) {
+            adjustedStatus = isPos ? 'Partial' : 'PARTIALLY PAID';
         } else {
             adjustedStatus = isPos ? 'Due' : 'UNPAID';
         }
@@ -1688,6 +1688,10 @@ const getInvoiceById = async (req, res) => {
                 (inv.invoiceitem || []).forEach(item => {
                     combinedItems.push({
                         ...item,
+                        sourceInvoiceId: inv.id,
+                        sourceInvoiceNumber: inv.invoiceNumber,
+                        invoiceNumber: inv.invoiceNumber,
+                        invoiceId: inv.id,
                         description: item.description || `Inv #${inv.invoiceNumber || inv.id}: ${item.product?.name || item.service?.name || ''}`
                     });
                 });
@@ -1696,7 +1700,7 @@ const getInvoiceById = async (req, res) => {
             const allPaid = balanceAmount <= 0.01 && (totalAmount > 0 || paidAmount > 0);
             const anyOverdue = customerInvoices.some(i => i.status === 'OVERDUE');
             const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || customerInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
-            const combinedStatus = allPaid ? 'PAID' : (hasPartial ? 'PARTIALLY PAID' : (anyOverdue ? 'OVERDUE' : 'UNPAID'));
+            const combinedStatus = allPaid ? 'PAID' : (anyOverdue ? 'OVERDUE' : (hasPartial ? 'PARTIALLY PAID' : 'UNPAID'));
 
             const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(customerInvoices, totalAmount);
 
@@ -3264,6 +3268,10 @@ const getPublicInvoiceById = async (req, res) => {
                 (inv.invoiceitem || []).forEach(item => {
                     combinedItems.push({
                         ...item,
+                        sourceInvoiceId: inv.id,
+                        sourceInvoiceNumber: inv.invoiceNumber,
+                        invoiceNumber: inv.invoiceNumber,
+                        invoiceId: inv.id,
                         description: item.description || `Inv #${inv.invoiceNumber || inv.id}: ${item.product?.name || item.service?.name || ''}`
                     });
                 });
@@ -3272,7 +3280,7 @@ const getPublicInvoiceById = async (req, res) => {
             const allPaid = balanceAmount <= 0.01 && (totalAmount > 0 || paidAmount > 0);
             const anyOverdue = customerInvoices.some(i => i.status === 'OVERDUE');
             const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || customerInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
-            const combinedStatus = allPaid ? 'PAID' : (hasPartial ? 'PARTIALLY PAID' : (anyOverdue ? 'OVERDUE' : 'UNPAID'));
+            const combinedStatus = allPaid ? 'PAID' : (anyOverdue ? 'OVERDUE' : (hasPartial ? 'PARTIALLY PAID' : 'UNPAID'));
 
             const company = customerInvoices[0]?.company || null;
             const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(customerInvoices, totalAmount);
@@ -3466,7 +3474,7 @@ const downloadPublicInvoicePdf = async (req, res) => {
             const allPaid = balanceAmount <= 0.01 && (totalAmount > 0 || paidAmount > 0);
             const anyOverdue = customerInvoices.some(i => i.status === 'OVERDUE');
             const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || customerInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
-            const combinedStatus = allPaid ? 'PAID' : (hasPartial ? 'PARTIALLY PAID' : (anyOverdue ? 'OVERDUE' : 'UNPAID'));
+            const combinedStatus = allPaid ? 'PAID' : (anyOverdue ? 'OVERDUE' : (hasPartial ? 'PARTIALLY PAID' : 'UNPAID'));
 
             company = customerInvoices[0]?.company || null;
             const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(customerInvoices, totalAmount);
@@ -3856,7 +3864,7 @@ const sendInvoiceEmail = async (req, res) => {
             const allPaid = balanceAmount <= 0.01 && (totalAmount > 0 || paidAmount > 0);
             const anyOverdue = customerInvoices.some(i => i.status === 'OVERDUE');
             const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || customerInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
-            const combinedStatus = allPaid ? 'PAID' : (hasPartial ? 'PARTIALLY PAID' : (anyOverdue ? 'OVERDUE' : 'UNPAID'));
+            const combinedStatus = allPaid ? 'PAID' : (anyOverdue ? 'OVERDUE' : (hasPartial ? 'PARTIALLY PAID' : 'UNPAID'));
 
             const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(customerInvoices, totalAmount);
 

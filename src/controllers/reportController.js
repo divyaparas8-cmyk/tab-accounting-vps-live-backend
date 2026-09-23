@@ -1,4 +1,4 @@
-const prisma = require('../config/prisma');
+﻿const prisma = require('../config/prisma');
 const { getConversionRate, getCompanyCurrency, getCompanyHistoricalCurrency } = require('../utils/currencyConverter');
 const { getDeduplicatedInvoiceReceipts, adjustInvoiceWithReturns } = require('./salesInvoiceController');
 const { isDuePassed, getDecimalPlaces } = require('../utils/invoiceSyncHelper');
@@ -394,17 +394,33 @@ const getSalesReport = async (req, res) => {
         
         const convertedSales = await Promise.all(salesReport.map(async inv => {
             const rate = await getConversionRate(inv.currency || 'USD', companyCurrency);
+            const tol = 0.01;
+            const rawBal = Math.max(0, parseFloat(inv.balanceAmount || 0));
+            const rawStatus = inv.status || 'UNPAID';
+
+            // Recalculate status: promote PARTIAL -> OVERDUE if due date has passed and balance remains
+            let liveStatus = rawStatus;
+            if (rawStatus !== 'CANCELLED' && rawStatus !== 'PAID' && rawStatus !== 'RETURNED') {
+                const duePassed = isDuePassed(inv.dueDate || inv.date);
+                if (rawBal > tol && duePassed) {
+                    liveStatus = 'OVERDUE';
+                } else if (rawStatus === 'PARTIAL') {
+                    liveStatus = 'PARTIALLY PAID';
+                }
+            }
+
             return {
                 ...inv,
                 type: 'SALE',
                 source: 'INVOICE',
                 isReturn: false,
+                status: liveStatus,
                 subtotal: inv.subtotal * rate,
                 discountAmount: inv.discountAmount * rate,
                 taxAmount: inv.taxAmount * rate,
                 totalAmount: inv.totalAmount * rate,
                 paidAmount: inv.paidAmount * rate,
-                balanceAmount: inv.balanceAmount * rate,
+                balanceAmount: rawBal * rate,
                 invoiceitem: inv.invoiceitem.map(item => ({
                     ...item,
                     rate: item.rate * rate,
@@ -1719,7 +1735,7 @@ const getBalanceSheet = async (req, res) => {
         const histCurr = await getCompanyHistoricalCurrency(companyId);
         const rate = await getConversionRate(histCurr, companyCurrency);
 
-        // --- Dynamic Inventory Value (real-time: quantity × cost from stock table) ---
+        // --- Dynamic Inventory Value (real-time: quantity Ã— cost from stock table) ---
         const currentInventoryValue = (await calculateInventoryValue(companyId)) * rate;
 
         ledgers.forEach(ledger => {
@@ -3397,7 +3413,7 @@ const getTrialBalance = async (req, res) => {
             const isOBE = ledger.name.toLowerCase().includes('opening balance equity');
             const groupType = ledger.accountgroup?.type;
 
-            // Skip transaction aggregation for OBE — it will be set dynamically below
+            // Skip transaction aggregation for OBE â€” it will be set dynamically below
             let totalDebit = 0;
             let totalCredit = 0;
 
@@ -3433,7 +3449,7 @@ const getTrialBalance = async (req, res) => {
                 netCredit = 0;
             }
 
-            // Always include OBE (even with 0 balance — the adjustment below will populate it)
+            // Always include OBE (even with 0 balance â€” the adjustment below will populate it)
             if (netDebit !== 0 || netCredit !== 0 || isOBE) {
                 trialBalance.push({
                     id: ledger.id,
@@ -3449,7 +3465,7 @@ const getTrialBalance = async (req, res) => {
         // Sort by Name
         trialBalance.sort((a, b) => a.name.localeCompare(b.name));
 
-        // Dynamic OBE adjustment — absorb any imbalance so TB always balances
+        // Dynamic OBE adjustment â€” absorb any imbalance so TB always balances
         const totalDebitTB = trialBalance.reduce((sum, item) => sum + item.debit, 0);
         const totalCreditTB = trialBalance.reduce((sum, item) => sum + item.credit, 0);
         const tbDifference = totalDebitTB - totalCreditTB;
