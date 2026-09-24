@@ -396,7 +396,7 @@ const updateGRN = async (req, res) => {
                         shippingState: purchaseOrder.shippingState || result.vendor?.shippingState || result.vendor?.billingState,
                         shippingZipCode: purchaseOrder.shippingZipCode || result.vendor?.shippingZipCode || result.vendor?.billingZipCode,
                         shippingCountry: purchaseOrder.shippingCountry,
-                        currency: bill.currency || 'USD',
+                        currency: bill.currency || 'EUR',
                         exchangeRate: bill.exchangeRate || 1.0,
                         manualStatus: bill.manualStatus,
                         status: bill.status,
@@ -572,7 +572,7 @@ const convertToPurchaseBill = async (req, res) => {
                 shippingState: purchaseOrder.shippingState || grn.vendor?.shippingState || grn.vendor?.billingState,
                 shippingZipCode: purchaseOrder.shippingZipCode || grn.vendor?.shippingZipCode || grn.vendor?.billingZipCode,
                 shippingCountry: purchaseOrder.shippingCountry,
-                currency: 'USD',
+                currency: grn.vendor?.currency || purchaseOrder?.currency || 'EUR',
                 exchangeRate: 1.0,
                 manualStatus: false,
                 status: 'UNPAID',
@@ -744,6 +744,8 @@ const convertMultipleToPurchaseBill = async (req, res) => {
                     notes: `${linkedPurchaseOrder?.orderNumber ? `Purchase Order No: ${linkedPurchaseOrder.orderNumber}\n` : ''}GRNs: ${grnNumbers.join(', ')}${firstGRN.notes ? '\n' + firstGRN.notes : ''}`,
                     overallDiscount: linkedPurchaseOrder ? parseFloat(linkedPurchaseOrder.overallDiscount) : 0,
                     overallDiscountType: linkedPurchaseOrder ? linkedPurchaseOrder.overallDiscountType : 'percentage',
+                    currency: linkedPurchaseOrder?.currency || firstGRN.vendor?.currency || 'EUR',
+                    exchangeRate: linkedPurchaseOrder?.exchangeRate || 1.0,
                     companyId: parseInt(companyId)
                 }
             };

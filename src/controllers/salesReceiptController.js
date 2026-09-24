@@ -984,6 +984,13 @@ const getReceipts = async (req, res) => {
         const companyId = req.user?.companyId || req.query.companyId;
         const { customerId } = req.query;
 
+        // Fetch company currency once (POS invoices always use company base currency)
+        const companyRecord = await prisma.company.findUnique({
+            where: { id: parseInt(companyId) },
+            select: { currency: true }
+        });
+        const companyCurrency = companyRecord?.currency || 'EUR';
+
         const where = { companyId: parseInt(companyId) };
         if (customerId) {
             where.customerId = parseInt(customerId);
@@ -1032,7 +1039,7 @@ const getReceipts = async (req, res) => {
                 companyId: t.companyId, createdAt: t.createdAt, updatedAt: t.updatedAt,
                 invoice: t.posinvoice ? {
                     id: t.posinvoice.id, invoiceNumber: t.posinvoice.invoiceNumber, totalAmount: t.posinvoice.totalAmount,
-                    paidAmount: t.posinvoice.paidAmount, balanceAmount: t.posinvoice.balanceAmount, date: t.posinvoice.date, status: t.posinvoice.status, currency: 'INR'
+                    paidAmount: t.posinvoice.paidAmount, balanceAmount: t.posinvoice.balanceAmount, date: t.posinvoice.date, status: t.posinvoice.status, currency: companyCurrency
                 } : null
             }));
 
@@ -1062,6 +1069,13 @@ const getReceiptById = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Receipt not found' });
         }
 
+        // Fetch company currency (POS invoices always use company base currency)
+        const companyRec = await prisma.company.findUnique({
+            where: { id: parseInt(companyId) },
+            select: { currency: true }
+        });
+        const companyCurrency = companyRec?.currency || 'EUR';
+
         const posTransactions = await prisma.transaction.findMany({
             where: { receiptId: receipt.id, posInvoiceId: { not: null }, voucherType: 'RECEIPT' },
             include: { posinvoice: { select: { id: true, invoiceNumber: true, totalAmount: true, paidAmount: true, balanceAmount: true, date: true, status: true } } }
@@ -1080,7 +1094,7 @@ const getReceiptById = async (req, res) => {
             companyId: t.companyId, createdAt: t.createdAt, updatedAt: t.updatedAt,
             invoice: t.posinvoice ? {
                 id: t.posinvoice.id, invoiceNumber: t.posinvoice.invoiceNumber, totalAmount: t.posinvoice.totalAmount,
-                paidAmount: t.posinvoice.paidAmount, balanceAmount: t.posinvoice.balanceAmount, date: t.posinvoice.date, status: t.posinvoice.status, currency: 'INR'
+                paidAmount: t.posinvoice.paidAmount, balanceAmount: t.posinvoice.balanceAmount, date: t.posinvoice.date, status: t.posinvoice.status, currency: companyCurrency
             } : null
         }));
 

@@ -419,7 +419,13 @@ const createInvoice = async (req, res) => {
         // Fallback to req.body.companyId if req.user is missing (custom frontend case)
         const companyId = req.user?.companyId || req.body.companyId;
 
-        const docCurrency = currency || 'USD';
+        let docCurrency = currency;
+        if (!docCurrency && companyId) {
+            const comp = await prisma.company.findUnique({ where: { id: parseInt(companyId) }, select: { currency: true } });
+            docCurrency = comp?.currency || 'EUR';
+        } else if (!docCurrency) {
+            docCurrency = 'EUR';
+        }
         const docExchangeRate = parseFloat(exchangeRate) || 1.0;
 
         if (!companyId) {

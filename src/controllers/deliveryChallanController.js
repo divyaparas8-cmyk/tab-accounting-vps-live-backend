@@ -780,6 +780,30 @@ const convertToInvoice = async (req, res) => {
             };
         });
 
+        // Also include service items from the linked sales order (services are intangible and not shipped via delivery challans)
+        if (salesOrder && salesOrder.salesorderitem) {
+            const serviceItems = salesOrder.salesorderitem
+                .filter(si => !si.productId && si.serviceId)
+                .map(si => ({
+                    productId: null,
+                    serviceId: si.serviceId,
+                    uomId: si.uomId || null,
+                    warehouseId: null,
+                    description: si.description || '',
+                    quantity: si.quantity,
+                    rate: si.rate,
+                    discount: si.discount,
+                    taxRate: si.taxRate
+                }));
+            invoiceItems.push(...serviceItems);
+        }
+
+        const company = await prisma.company.findUnique({
+            where: { id: parseInt(companyId) },
+            select: { currency: true }
+        });
+        const docCurrency = salesOrder.currency || company?.currency || 'EUR';
+
         // Set up the fake request body for createInvoice
         const fakeReq = {
             user: req.user,
@@ -806,8 +830,8 @@ const convertToInvoice = async (req, res) => {
                 shippingState: challan.shippingState || salesOrder.shippingState || challan.customer?.shippingState || challan.customer?.billingState,
                 shippingZipCode: challan.shippingZipCode || salesOrder.shippingZipCode || challan.customer?.shippingZipCode || challan.customer?.billingZipCode,
                 shippingCountry: salesOrder.shippingCountry,
-                currency: 'USD',
-                exchangeRate: 1.0,
+                currency: docCurrency,
+                exchangeRate: salesOrder.exchangeRate || 1.0,
                 manualStatus: false,
                 status: 'UNPAID',
                 companyId: parseInt(companyId)
@@ -963,6 +987,33 @@ const convertMultipleToInvoice = async (req, res) => {
 
             const invoiceItems = Object.values(consolidatedMap);
 
+            // Also include service items from the linked sales orders (services are intangible and not shipped via delivery challans)
+            // const processedServiceKeys = new Set();
+            // for (const challan of customerChallans) {
+            //     const salesOrder = challan.salesorder;
+            //     if (salesOrder && salesOrder.salesorderitem) {
+            //         for (const si of salesOrder.salesorderitem) {
+            //             if (!si.productId && si.serviceId) {
+            //                 const sKey = `${salesOrder.id}_${si.serviceId}`;
+            //                 if (!processedServiceKeys.has(sKey)) {
+            //                     processedServiceKeys.add(sKey);
+            //                     invoiceItems.push({
+            //                         productId: null,
+            //                         serviceId: si.serviceId,
+            //                         uomId: si.uomId || null,
+            //                         warehouseId: null,
+            //                         description: si.description || '',
+            //                         quantity: si.quantity,
+            //                         rate: si.rate,
+            //                         discount: si.discount,
+            //                         taxRate: si.taxRate
+            //                     });
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
+
             // Generate Invoice Number
             const numbering = await numberingService.getNextNumber(companyId, 'invoice');
             const invoiceNumber = numbering.formattedNumber;
@@ -993,6 +1044,8 @@ const convertMultipleToInvoice = async (req, res) => {
                     shippingState: firstChallan.shippingState || linkedSalesOrder?.shippingState || firstChallan.customer?.shippingState || firstChallan.customer?.billingState,
                     shippingZipCode: firstChallan.shippingZipCode || linkedSalesOrder?.shippingZipCode || firstChallan.customer?.shippingZipCode || firstChallan.customer?.billingZipCode,
                     shippingCountry: firstChallan.shippingCountry || linkedSalesOrder?.shippingCountry || firstChallan.customer?.shippingCountry || firstChallan.customer?.billingCountry,
+                    currency: linkedSalesOrder?.currency || firstChallan.customer?.currency || 'EUR',
+                    exchangeRate: linkedSalesOrder?.exchangeRate || 1.0,
                     companyId: parseInt(companyId)
                 }
             };

@@ -75,7 +75,13 @@ const createBill = async (req, res) => {
         const { billNumber, date, dueDate, vendorId, purchaseOrderId, grnId, items, notes, discountAmount, taxAmount, totalAmount, billingName, billingAddress, billingCity, billingState, billingZipCode, billingCountry, shippingName, shippingAddress, shippingCity, shippingState, shippingZipCode, shippingCountry, overallDiscount, overallDiscountType, currency, exchangeRate, customFields, manualStatus, status, manualReference } = req.body;
         const companyId = req.user?.companyId || req.query.companyId || req.body.companyId;
 
-        const docCurrency = currency || 'USD';
+        let docCurrency = currency;
+        if (!docCurrency && companyId) {
+            const comp = await prisma.company.findUnique({ where: { id: parseInt(companyId) }, select: { currency: true } });
+            docCurrency = comp?.currency || 'EUR';
+        } else if (!docCurrency) {
+            docCurrency = 'EUR';
+        }
         const docExchangeRate = parseFloat(exchangeRate) || 1.0;
 
         if (!billNumber || !vendorId || !items || items.length === 0) {

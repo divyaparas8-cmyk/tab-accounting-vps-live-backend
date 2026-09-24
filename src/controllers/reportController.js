@@ -828,7 +828,7 @@ const getPurchaseReport = async (req, res) => {
         const companyCurrency = await getCompanyCurrency(companyId);
         const now = new Date();
         const convertedPurchaseBills = await Promise.all(purchaseReport.map(async bill => {
-            const rate = await getConversionRate(bill.currency || 'USD', companyCurrency);
+            const rate = await getConversionRate(bill.currency || companyCurrency || 'EUR', companyCurrency);
             const total = (bill.totalAmount || 0) * rate;
             const bal = (bill.balanceAmount || 0) * rate;
             const paid = ((bill.totalAmount || 0) - (bill.balanceAmount || 0)) * rate;
@@ -959,7 +959,7 @@ const getPurchaseByItemReport = async (req, res) => {
         for (const item of billItems) {
             const productId = item.productId || 'unknown';
             const productName = item.product?.name || item.description || 'Unknown';
-            const rate = await getConversionRate(item.purchasebill?.currency || 'USD', companyCurrency);
+            const rate = await getConversionRate(item.purchasebill?.currency || companyCurrency || 'EUR', companyCurrency);
 
             if (!grouped[productId]) {
                 grouped[productId] = {
@@ -1015,7 +1015,7 @@ const getPurchaseByVendorReport = async (req, res) => {
         for (const bill of bills) {
             const vendorId = bill.vendorId || 'unknown';
             const vendorName = bill.vendor?.name || 'Unknown Vendor';
-            const rate = await getConversionRate(bill.currency || 'USD', companyCurrency);
+            const rate = await getConversionRate(bill.currency || companyCurrency || 'EUR', companyCurrency);
 
             if (!grouped[vendorId]) {
                 grouped[vendorId] = {
@@ -2911,7 +2911,7 @@ const getVatReport = async (req, res) => {
             });
 
             for (const bill of bills) {
-                const exRate = await getConversionRate(bill.currency || 'USD', companyCurrency);
+                const exRate = await getConversionRate(bill.currency || companyCurrency || 'EUR', companyCurrency);
                 const taxable = (parseFloat(bill.subtotal) || 0) * exRate;
                 const tax = (parseFloat(bill.taxAmount) || 0) * exRate;
                 const rate = taxable > 0 ? Number(((tax / taxable) * 100).toFixed(1)) : 0;
@@ -3184,7 +3184,7 @@ const getDayBook = async (req, res) => {
             }).then(async items => {
                 const companyCurrency = await getCompanyCurrency(companyIdInt);
                 return Promise.all(items.map(async bill => {
-                    const rate = await getConversionRate(bill.currency || 'USD', companyCurrency);
+                    const rate = await getConversionRate(bill.currency || companyCurrency || 'EUR', companyCurrency);
                     return {
                         id: `BILL-${bill.id}`,
                         date: bill.date,

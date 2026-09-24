@@ -23,12 +23,12 @@ const createReturn = async (req, res) => {
                 select: { currency: true, exchangeRate: true }
             });
             if (srcBill) {
-                docCurrency = docCurrency || srcBill.currency || 'USD';
+                docCurrency = docCurrency || srcBill.currency || 'EUR';
                 docExchangeRate = docExchangeRate || parseFloat(srcBill.exchangeRate) || 1.0;
             }
         }
         if (!docCurrency) {
-            docCurrency = await getCompanyCurrency(companyId);
+            docCurrency = (await getCompanyCurrency(companyId)) || 'EUR';
         }
         if (!docExchangeRate) {
             docExchangeRate = await getConversionRate(docCurrency, await getCompanyCurrency(companyId));
