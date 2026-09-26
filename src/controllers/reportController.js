@@ -403,7 +403,8 @@ const getSalesReport = async (req, res) => {
         const companyCurrency = await getCompanyCurrency(companyId);
         
         const convertedSales = await Promise.all(salesReport.map(async inv => {
-            const rate = await getConversionRate(inv.currency || companyCurrency || 'EUR', companyCurrency);
+            const isBaseCurr = !inv.currency || inv.currency.toUpperCase() === (companyCurrency || 'EUR').toUpperCase();
+            const rate = isBaseCurr ? 1.0 : await getConversionRate(inv.currency, companyCurrency);
             const tol = 0.01;
 
             // Compute authoritative balance:
@@ -451,7 +452,8 @@ const getSalesReport = async (req, res) => {
         }));
 
         const convertedPosSales = await Promise.all(posReport.map(async pos => {
-            const rate = await getConversionRate(pos.currency || companyCurrency || 'EUR', companyCurrency);
+            const isBaseCurr = !pos.currency || pos.currency.toUpperCase() === (companyCurrency || 'EUR').toUpperCase();
+            const rate = isBaseCurr ? 1.0 : await getConversionRate(pos.currency, companyCurrency);
             return {
                 id: pos.id,
                 invoiceNumber: pos.invoiceNumber,
@@ -539,9 +541,11 @@ const getSalesReport = async (req, res) => {
         };
 
         allSales.forEach(inv => {
-            const total = inv.totalAmount || 0;
-            const unpaid = inv.balanceAmount || 0;
-            const paid = total - unpaid;
+            const total = parseFloat(inv.totalAmount || 0);
+            const unpaid = parseFloat(inv.balanceAmount || 0);
+            const paid = (inv.paidAmount !== undefined && inv.paidAmount !== null && !isNaN(parseFloat(inv.paidAmount)))
+                ? parseFloat(inv.paidAmount)
+                : Math.max(0, total - unpaid);
 
             summary.totalSales += total;
             summary.totalAmount += total;
