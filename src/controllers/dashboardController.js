@@ -212,7 +212,7 @@ const getCompanyDashboardStats = async (req, res) => {
             _sum: { totalAmount: true }
         });
         const posTotals = await prisma.posinvoice.aggregate({
-            where: { companyId: compId },
+            where: { companyId: compId, NOT: { status: { in: ['CANCELLED', 'Cancelled'] } } },
             _sum: { totalAmount: true }
         });
         const totalInvoiced = ((invoiceTotals._sum.totalAmount || 0) + (posTotals._sum.totalAmount || 0)) * rate;

@@ -349,7 +349,7 @@ const getSalesReport = async (req, res) => {
         let salesReport = [];
         if (!transactionFilter || transactionFilter === 'ALL' || transactionFilter === 'SALES' || transactionFilter === 'INVOICE') {
             salesReport = await prisma.invoice.findMany({
-                where: whereClause,
+                where: { ...whereClause, NOT: { status: 'CANCELLED' } },
                 include: {
                     customer: { select: { name: true, email: true } },
                     salesperson: { select: { id: true, name: true } },
@@ -367,7 +367,7 @@ const getSalesReport = async (req, res) => {
         let posReport = [];
         if (!transactionFilter || transactionFilter === 'ALL' || transactionFilter === 'SALES' || transactionFilter === 'POS') {
             posReport = await prisma.posinvoice.findMany({
-                where: whereClause,
+                where: { ...whereClause, NOT: { status: { in: ['CANCELLED', 'Cancelled'] } } },
                 include: {
                     customer: { select: { name: true, email: true } },
                     posinvoiceitem: {
@@ -403,7 +403,7 @@ const getSalesReport = async (req, res) => {
         const companyCurrency = await getCompanyCurrency(companyId);
         
         const convertedSales = await Promise.all(salesReport.map(async inv => {
-            const rate = await getConversionRate(inv.currency || 'USD', companyCurrency);
+            const rate = await getConversionRate(inv.currency || companyCurrency || 'EUR', companyCurrency);
             const tol = 0.01;
 
             // Compute authoritative balance:
@@ -451,7 +451,7 @@ const getSalesReport = async (req, res) => {
         }));
 
         const convertedPosSales = await Promise.all(posReport.map(async pos => {
-            const rate = await getConversionRate(pos.currency || 'USD', companyCurrency);
+            const rate = await getConversionRate(pos.currency || companyCurrency || 'EUR', companyCurrency);
             return {
                 id: pos.id,
                 invoiceNumber: pos.invoiceNumber,
@@ -480,7 +480,7 @@ const getSalesReport = async (req, res) => {
         }));
 
         const convertedReturns = await Promise.all(salesReturns.map(async ret => {
-            const rate = await getConversionRate(ret.currency || 'USD', companyCurrency);
+            const rate = await getConversionRate(ret.currency || companyCurrency || 'EUR', companyCurrency);
 
             let isPosReturn = false;
             if (ret.customFields) {
@@ -607,7 +607,7 @@ const getSalesByItemReport = async (req, res) => {
         for (const item of invoiceItems) {
             const productId = item.productId || 'service-' + (item.serviceId || 'unknown');
             const productName = item.product?.name || item.description || 'Unknown';
-            const rate = await getConversionRate(item.invoice?.currency || 'USD', companyCurrency);
+            const rate = await getConversionRate(item.invoice?.currency || companyCurrency || 'EUR', companyCurrency);
 
             if (!grouped[productId]) {
                 grouped[productId] = {
@@ -670,7 +670,7 @@ const getSalesByCustomerReport = async (req, res) => {
         for (const inv of allInvoices) {
             const customerId = inv.customerId || 'walk-in';
             const customerName = inv.customer?.name || 'Walk-in Customer';
-            const rate = await getConversionRate(inv.currency || 'USD', companyCurrency);
+            const rate = await getConversionRate(inv.currency || companyCurrency || 'EUR', companyCurrency);
 
             if (!grouped[customerId]) {
                 grouped[customerId] = {
@@ -718,7 +718,7 @@ const getSalesBySalesmanReport = async (req, res) => {
         const grouped = {};
         for (const inv of allInvoices) {
             const salesman = '';
-            const rate = await getConversionRate(inv.currency || 'USD', companyCurrency);
+            const rate = await getConversionRate(inv.currency || companyCurrency || 'EUR', companyCurrency);
             if (!grouped[salesman]) {
                 grouped[salesman] = { salesman, totalInvoices: 0, totalSales: 0, totalPaid: 0, totalPending: 0 };
             }
@@ -856,7 +856,7 @@ const getPurchaseReport = async (req, res) => {
         }));
 
         const convertedReturns = await Promise.all(purchaseReturns.map(async ret => {
-            const rate = await getConversionRate(ret.currency || 'USD', companyCurrency);
+            const rate = await getConversionRate(ret.currency || companyCurrency || 'EUR', companyCurrency);
             return {
                 id: ret.id,
                 billNumber: ret.returnNumber,
@@ -3825,18 +3825,38 @@ const getAllTransactions = async (req, res) => {
             let createdDate = primaryTxn.createdAt;
             let lastUpdated = primaryTxn.createdAt;
             let sourceModule = 'General Ledger';
+            let dueDate = null;
+            let balanceAmount = 0;
+            let paidAmount = 0;
+            let isOverdue = false;
 
             if (key.startsWith('invoice_') && primaryTxn.invoice) {
-                customerVendor = primaryTxn.invoice.customer?.name || '-';
-                currency = primaryTxn.invoice.currency || 'INR';
-                exchangeRate = primaryTxn.invoice.exchangeRate || 1.0;
-                status = primaryTxn.invoice.status || 'UNPAID';
-                referenceNo = primaryTxn.invoice.manualReference || '-';
-                createdDate = primaryTxn.invoice.createdAt;
-                lastUpdated = primaryTxn.invoice.updatedAt;
+                const inv = primaryTxn.invoice;
+                customerVendor = inv.customer?.name || '-';
+                currency = inv.currency || 'INR';
+                exchangeRate = inv.exchangeRate || 1.0;
+                referenceNo = inv.manualReference || '-';
+                createdDate = inv.createdAt;
+                lastUpdated = inv.updatedAt;
                 sourceModule = 'Sales';
+                dueDate = inv.dueDate;
 
-                const items = primaryTxn.invoice.invoiceitem || [];
+                const invTotal = parseFloat(inv.totalAmount || 0);
+                paidAmount = parseFloat(inv.paidAmount || 0);
+                balanceAmount = parseFloat(inv.balanceAmount !== null && inv.balanceAmount !== undefined ? inv.balanceAmount : Math.max(0, invTotal - paidAmount));
+                const now = new Date();
+                const isInvPastDue = inv.dueDate && new Date(inv.dueDate) < now;
+                isOverdue = (inv.status !== 'CANCELLED' && inv.status !== 'PAID' && (inv.status === 'OVERDUE' || (isInvPastDue && balanceAmount > 0.01)));
+
+                if (isOverdue) {
+                    status = 'OVERDUE';
+                } else if (inv.status) {
+                    status = inv.status;
+                } else {
+                    status = balanceAmount <= 0.01 ? 'PAID' : (paidAmount > 0.01 ? 'PARTIAL' : 'UNPAID');
+                }
+
+                const items = inv.invoiceitem || [];
                 itemsList = items.map(item => item.product?.name || item.description).filter(Boolean);
                 skuList = items.map(item => item.product?.sku).filter(Boolean);
                 qtyList = items.map(item => item.quantity);
@@ -3847,16 +3867,32 @@ const getAllTransactions = async (req, res) => {
                 whList = items.map(item => item.warehouse?.name).filter(Boolean);
             }
             else if (key.startsWith('purchasebill_') && primaryTxn.purchasebill) {
-                customerVendor = primaryTxn.purchasebill.vendor?.name || '-';
-                currency = primaryTxn.purchasebill.currency || 'INR';
-                exchangeRate = primaryTxn.purchasebill.exchangeRate || 1.0;
-                status = primaryTxn.purchasebill.status || 'UNPAID';
-                referenceNo = primaryTxn.purchasebill.billNumber || '-';
-                createdDate = primaryTxn.purchasebill.createdAt;
-                lastUpdated = primaryTxn.purchasebill.updatedAt;
+                const bill = primaryTxn.purchasebill;
+                customerVendor = bill.vendor?.name || '-';
+                currency = bill.currency || 'INR';
+                exchangeRate = bill.exchangeRate || 1.0;
+                referenceNo = bill.billNumber || '-';
+                createdDate = bill.createdAt;
+                lastUpdated = bill.updatedAt;
                 sourceModule = 'Purchases';
+                dueDate = bill.dueDate;
 
-                const items = primaryTxn.purchasebill.purchasebillitem || [];
+                const billTotal = parseFloat(bill.totalAmount || 0);
+                paidAmount = parseFloat(bill.paidAmount || 0);
+                balanceAmount = parseFloat(bill.balanceAmount !== null && bill.balanceAmount !== undefined ? bill.balanceAmount : Math.max(0, billTotal - paidAmount));
+                const now = new Date();
+                const isBillPastDue = bill.dueDate && new Date(bill.dueDate) < now;
+                isOverdue = (bill.status !== 'CANCELLED' && bill.status !== 'PAID' && (bill.status === 'OVERDUE' || (isBillPastDue && balanceAmount > 0.01)));
+
+                if (isOverdue) {
+                    status = 'OVERDUE';
+                } else if (bill.status) {
+                    status = bill.status;
+                } else {
+                    status = balanceAmount <= 0.01 ? 'PAID' : (paidAmount > 0.01 ? 'PARTIAL' : 'UNPAID');
+                }
+
+                const items = bill.purchasebillitem || [];
                 itemsList = items.map(item => item.product?.name || item.description).filter(Boolean);
                 skuList = items.map(item => item.product?.sku).filter(Boolean);
                 qtyList = items.map(item => item.quantity);
@@ -3883,13 +3919,29 @@ const getAllTransactions = async (req, res) => {
                 sourceModule = 'Purchase Payments';
             }
             else if (key.startsWith('posinvoice_') && primaryTxn.posinvoice) {
-                customerVendor = primaryTxn.posinvoice.customer?.name || 'Walk-in';
-                currency = primaryTxn.posinvoice.currency || 'INR';
-                status = primaryTxn.posinvoice.status || 'PAID';
-                createdDate = primaryTxn.posinvoice.createdAt;
+                const pos = primaryTxn.posinvoice;
+                customerVendor = pos.customer?.name || 'Walk-in';
+                currency = pos.currency || 'INR';
+                createdDate = pos.createdAt;
                 sourceModule = 'POS';
+                dueDate = pos.dueDate || pos.date;
 
-                const items = primaryTxn.posinvoice.posinvoiceitem || [];
+                const posTotal = parseFloat(pos.totalAmount || 0);
+                paidAmount = parseFloat(pos.paidAmount || 0);
+                balanceAmount = parseFloat(pos.balanceAmount !== null && pos.balanceAmount !== undefined ? pos.balanceAmount : Math.max(0, posTotal - paidAmount));
+                const now = new Date();
+                const isPosPastDue = dueDate && new Date(dueDate) < now;
+                isOverdue = (pos.status !== 'CANCELLED' && pos.status !== 'PAID' && (pos.status === 'OVERDUE' || (isPosPastDue && balanceAmount > 0.01)));
+
+                if (isOverdue) {
+                    status = 'OVERDUE';
+                } else if (pos.status) {
+                    status = pos.status;
+                } else {
+                    status = balanceAmount <= 0.01 ? 'PAID' : (paidAmount > 0.01 ? 'PARTIAL' : 'UNPAID');
+                }
+
+                const items = pos.posinvoiceitem || [];
                 itemsList = items.map(item => item.product?.name || item.description).filter(Boolean);
                 skuList = items.map(item => item.product?.sku).filter(Boolean);
                 qtyList = items.map(item => item.quantity);
@@ -3938,6 +3990,10 @@ const getAllTransactions = async (req, res) => {
                 currency,
                 exchangeRate,
                 status,
+                dueDate,
+                balanceAmount,
+                paidAmount,
+                isOverdue,
                 referenceNo,
                 paymentMethod,
                 bankAccount,
