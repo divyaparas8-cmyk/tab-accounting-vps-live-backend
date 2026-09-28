@@ -838,8 +838,151 @@ const importPurchaseBills = async (req, res) => {
     }
 };
 
+/**
+ * Bulk Import Services
+ */
+const importServices = async (req, res) => {
+    try {
+        const companyId = req.user?.companyId || parseInt(req.body.companyId);
+        const { rows = [], duplicateStrategy = 'update' } = req.body; // 'update' or 'skip'
+
+        if (!companyId) {
+            return res.status(400).json({ success: false, message: 'Company ID is required' });
+        }
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            return res.status(400).json({ success: false, message: 'No service rows provided for import' });
+        }
+
+        const results = {
+            total: rows.length,
+            created: 0,
+            updated: 0,
+            skipped: 0,
+            errors: []
+        };
+
+        // Cache existing UOMs
+        const existingUoms = await prisma.uom.findMany({ where: { companyId } });
+        const uomMap = new Map(existingUoms.map(u => [u.unitName.toLowerCase().trim(), u.id]));
+
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const rowNum = i + 1;
+
+            const name = (row.name || row['Service Name'] || '').trim();
+            if (!name) {
+                results.errors.push({ row: rowNum, error: 'Service Name is required' });
+                results.skipped++;
+                continue;
+            }
+
+            const sku = (row.sku || row['SKU / Code'] || row['SKU'] || '').trim();
+            const description = (row.description || row['Service Description'] || row['Description'] || '').trim();
+            const uomName = (row.uomName || row['Unit of Measure'] || row['UOM'] || '').trim();
+            const price = parseFloat(row.price !== undefined && row.price !== '' ? row.price : (row['Price'] !== undefined && row['Price'] !== '' ? row['Price'] : 0)) || 0;
+            const taxRate = parseFloat(row.taxRate !== undefined && row.taxRate !== '' ? row.taxRate : (row['Tax Rate %'] !== undefined && row['Tax Rate %'] !== '' ? row['Tax Rate %'] : 0)) || 0;
+
+            let allowInInvoices = true;
+            const rawAllow = row.allowInInvoices !== undefined ? row.allowInInvoices : (row['Allow in Invoices (Yes / No)'] !== undefined ? row['Allow in Invoices (Yes / No)'] : row['Allow in Invoices']);
+            if (rawAllow !== undefined && rawAllow !== null && rawAllow !== '') {
+                if (typeof rawAllow === 'boolean') {
+                    allowInInvoices = rawAllow;
+                } else {
+                    const strVal = String(rawAllow).toLowerCase().trim();
+                    if (strVal === 'no' || strVal === 'false' || strVal === '0') {
+                        allowInInvoices = false;
+                    }
+                }
+            }
+
+            const remarks = (row.remarks || row['Remarks'] || '').trim();
+
+            try {
+                // 1. Resolve or Create UOM
+                let uomId = null;
+                if (uomName) {
+                    const uomKey = uomName.toLowerCase();
+                    if (uomMap.has(uomKey)) {
+                        uomId = uomMap.get(uomKey);
+                    } else {
+                        const newUom = await prisma.uom.create({
+                            data: { unitName: uomName, category: 'General', companyId }
+                        });
+                        uomId = newUom.id;
+                        uomMap.set(uomKey, uomId);
+                    }
+                }
+
+                // 2. Check for existing service
+                const existingService = await prisma.service.findFirst({
+                    where: {
+                        companyId,
+                        OR: [
+                            { name: name },
+                            ...(sku ? [{ sku: sku }] : [])
+                        ]
+                    }
+                });
+
+                if (existingService) {
+                    if (duplicateStrategy === 'skip') {
+                        results.skipped++;
+                        continue;
+                    }
+
+                    // Update existing service
+                    await prisma.service.update({
+                        where: { id: existingService.id },
+                        data: {
+                            sku: sku || existingService.sku,
+                            description: description || existingService.description,
+                            uomId: uomId !== null ? uomId : existingService.uomId,
+                            price,
+                            taxRate,
+                            allowInInvoices,
+                            remarks: remarks || existingService.remarks
+                        }
+                    });
+                    results.updated++;
+                } else {
+                    // Create new service
+                    await prisma.service.create({
+                        data: {
+                            name,
+                            sku: sku || null,
+                            description: description || null,
+                            uomId,
+                            price,
+                            taxRate,
+                            allowInInvoices,
+                            remarks: remarks || null,
+                            companyId
+                        }
+                    });
+                    results.created++;
+                }
+            } catch (err) {
+                console.error(`Error importing service row ${rowNum}:`, err);
+                results.errors.push({ row: rowNum, item: name, error: err.message });
+                results.skipped++;
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Services Import Complete: ${results.created} created, ${results.updated} updated, ${results.skipped} skipped.`,
+            data: results
+        });
+    } catch (error) {
+        console.error('Bulk Import Services Error:', error);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     importProducts,
+    importServices,
     importCustomers,
     importVendors,
     importChartOfAccounts,

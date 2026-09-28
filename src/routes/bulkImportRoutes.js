@@ -4,6 +4,7 @@ const bulkImportController = require('../controllers/bulkImportController');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 
 router.post('/products', authenticateToken, bulkImportController.importProducts);
+router.post('/services', authenticateToken, bulkImportController.importServices);
 router.post('/customers', authenticateToken, bulkImportController.importCustomers);
 router.post('/vendors', authenticateToken, bulkImportController.importVendors);
 router.post('/chart-of-accounts', authenticateToken, bulkImportController.importChartOfAccounts);
