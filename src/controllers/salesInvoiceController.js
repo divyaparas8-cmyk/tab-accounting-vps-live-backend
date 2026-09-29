@@ -1725,6 +1725,7 @@ const getInvoiceById = async (req, res) => {
                 status: combinedStatus,
                 manualStatus: false,
                 currency: customerInvoices[0]?.currency || company?.currency || 'EUR',
+                customerId: custId,
                 customer: customer || { name: customer?.name || 'Customer' },
                 isCombined: true,
                 invoiceitem: combinedItems,
@@ -3996,7 +3997,7 @@ async function syncSalesOrderStatus(tx, salesOrderId) {
     }
 }
 
-// Get Audit Trail for a specific Invoice
+// Get Audit Trail for a specific Invoice (supports individual and combined invoices)
 const getInvoiceAuditTrail = async (req, res) => {
     try {
         const { id } = req.params;
@@ -4006,24 +4007,119 @@ const getInvoiceAuditTrail = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Company ID is missing' });
         }
 
-        const parsedId = !isNaN(parseInt(id)) ? parseInt(id) : null;
-        const invoice = parsedId ? await prisma.invoice.findFirst({
-            where: { id: parsedId, companyId: parseInt(companyId) },
-            select: { id: true, invoiceNumber: true }
-        }) : null;
+        const rawTarget = String(id || '').trim();
+        const lowerTarget = rawTarget.toLowerCase();
+        const isCombined = lowerTarget.startsWith('combined-') || lowerTarget.includes('combined');
+        const companyScope = { companyId: parseInt(companyId) };
 
-        const orConditions = [];
-        if (parsedId) orConditions.push({ entityId: parsedId });
-        if (invoice) {
-            orConditions.push({ details: { contains: invoice.invoiceNumber } });
-        } else if (typeof id === 'string' && id) {
-            orConditions.push({ details: { contains: id } });
+        const orConditions = [
+            { details: { contains: rawTarget } }
+        ];
+
+        if (isCombined) {
+            let custId = req.query.customerId ? parseInt(req.query.customerId, 10) : null;
+            if (!custId) {
+                const match = rawTarget.match(/cust-(\d+)/i) || rawTarget.match(/combined-(\d+)/i);
+                if (match) custId = parseInt(match[1], 10);
+            }
+
+            if (custId && !isNaN(custId)) {
+                orConditions.push(
+                    { details: { contains: `combined-CUST-${custId}` } },
+                    { details: { contains: `COMBINED-CUST-${custId}` } },
+                    { details: { contains: `"customerId":${custId}` } },
+                    { details: { contains: `"customerId": ${custId}` } },
+                    { details: { contains: `Customer ID ${custId}` } },
+                    { details: { contains: `Customer #${custId}` } }
+                );
+
+                const [custInvoices, custPosInvoices, custReceipts] = await Promise.all([
+                    prisma.invoice.findMany({
+                        where: { customerId: custId, ...companyScope },
+                        select: { id: true, invoiceNumber: true }
+                    }),
+                    prisma.posinvoice.findMany({
+                        where: { customerId: custId, ...companyScope },
+                        select: { id: true, invoiceNumber: true }
+                    }),
+                    prisma.receipt.findMany({
+                        where: { customerId: custId, ...companyScope },
+                        select: { id: true, receiptNumber: true }
+                    })
+                ]);
+
+                const invIds = custInvoices.map(i => i.id);
+                const posIds = custPosInvoices.map(p => p.id);
+                const recIds = custReceipts.map(r => r.id);
+                const invNums = [...custInvoices.map(i => i.invoiceNumber), ...custPosInvoices.map(p => p.invoiceNumber)].filter(Boolean);
+                const recNums = custReceipts.map(r => r.receiptNumber).filter(Boolean);
+
+                if (invIds.length > 0) {
+                    orConditions.push({
+                        entity: { in: ['Invoice', 'Sales Invoice'] },
+                        entityId: { in: invIds }
+                    });
+                }
+                if (posIds.length > 0) {
+                    orConditions.push({
+                        entity: { in: ['POS', 'POS Invoice', 'posinvoice'] },
+                        entityId: { in: posIds }
+                    });
+                }
+                if (recIds.length > 0) {
+                    orConditions.push({
+                        entity: { in: ['Receipt', 'Sales Receipt', 'Payment'] },
+                        entityId: { in: recIds }
+                    });
+                }
+
+                invNums.forEach(num => orConditions.push({ details: { contains: num } }));
+                recNums.forEach(num => orConditions.push({ details: { contains: num } }));
+            }
+        } else {
+            const parsedId = !isNaN(parseInt(rawTarget)) ? parseInt(rawTarget) : null;
+            if (parsedId) orConditions.push({ entityId: parsedId });
+
+            const invoice = parsedId ? await prisma.invoice.findFirst({
+                where: { id: parsedId, ...companyScope },
+                include: {
+                    allocations: {
+                        include: { receipt: { select: { id: true, receiptNumber: true } } }
+                    }
+                }
+            }) : await prisma.invoice.findFirst({
+                where: { invoiceNumber: rawTarget, ...companyScope },
+                include: {
+                    allocations: {
+                        include: { receipt: { select: { id: true, receiptNumber: true } } }
+                    }
+                }
+            });
+
+            if (invoice) {
+                orConditions.push(
+                    { entityId: invoice.id },
+                    { details: { contains: invoice.invoiceNumber } },
+                    { details: { contains: `"invoiceId":${invoice.id}` } },
+                    { details: { contains: `"invoiceId": ${invoice.id}` } }
+                );
+
+                const recIds = (invoice.allocations || []).map(a => a.receipt?.id).filter(Boolean);
+                const recNums = (invoice.allocations || []).map(a => a.receipt?.receiptNumber).filter(Boolean);
+
+                if (recIds.length > 0) {
+                    orConditions.push({
+                        entity: { in: ['Receipt', 'Sales Receipt', 'Payment'] },
+                        entityId: { in: recIds }
+                    });
+                }
+                recNums.forEach(num => orConditions.push({ details: { contains: num } }));
+            }
         }
 
         const logs = await prisma.auditlog.findMany({
             where: {
                 companyId: parseInt(companyId),
-                entity: 'Invoice',
                 OR: orConditions
             },
             orderBy: { createdAt: 'desc' },

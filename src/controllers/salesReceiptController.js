@@ -407,22 +407,69 @@ const createReceipt = async (req, res) => {
         }, { timeout: 30000 });
 
         await numberingService.incrementNumber(companyId, 'receipt', receiptNumber);
-        logActivity(req, 'CREATE', 'Receipt', result.id, `Receipt #${result.receiptNumber} created for Customer ID ${result.customerId} with amount ${result.amount}`);
+        logActivity(req, 'CREATE', 'Receipt', result.id, {
+            summary: `Receipt #${result.receiptNumber} created for ${customer.name || `Customer #${result.customerId}`} with amount ${result.amount}`,
+            receiptNumber: result.receiptNumber,
+            receiptId: result.id,
+            customerId: result.customerId,
+            customerName: customer.name || null,
+            amount: result.amount,
+            paymentMode: result.paymentMode,
+            combinedInvoiceId: result.customerId ? `combined-CUST-${result.customerId}` : null,
+            allocations: normalizedAllocations.map(a => ({ invoiceId: a.invoiceId, invoiceType: a.invoiceType, amount: a.amount }))
+        });
 
         // Invoice audit logging for payment added
         try {
             const { logInvoicePaymentAdded } = require('../utils/invoiceAuditHelper');
             for (const alloc of normalizedAllocations) {
-                if (alloc.invoiceType === 'TAX_INVOICE' && alloc.invoiceId) {
-                    const targetInv = await prisma.invoice.findUnique({ where: { id: alloc.invoiceId } });
-                    if (targetInv) {
-                        await logInvoicePaymentAdded(req, targetInv, {
-                            amount: alloc.amount,
-                            receiptNumber: result.receiptNumber,
-                            receiptId: result.id,
-                            paymentMode: result.paymentMode,
-                            previousPaidAmount: Math.max(0, (targetInv.paidAmount || 0) - alloc.amount)
+                if (alloc.invoiceId) {
+                    const isPos = alloc.invoiceType === 'POS_INVOICE';
+                    if (!isPos) {
+                        const targetInv = await prisma.invoice.findUnique({
+                            where: { id: alloc.invoiceId },
+                            include: { customer: { select: { id: true, name: true } } }
                         });
+                        if (targetInv) {
+                            const prevPaid = Math.max(0, (targetInv.paidAmount || 0) - alloc.amount);
+                            const total = parseFloat(targetInv.totalAmount) || 0;
+                            const prevStatus = prevPaid <= 0.01 ? (isDuePassed(targetInv.dueDate) ? 'OVERDUE' : 'UNPAID') : (prevPaid >= total - 0.01 ? 'PAID' : 'PARTIAL');
+                            await logInvoicePaymentAdded(req, targetInv, {
+                                amount: alloc.amount,
+                                receiptNumber: result.receiptNumber,
+                                receiptId: result.id,
+                                paymentMode: result.paymentMode,
+                                customerId: targetInv.customerId,
+                                customerName: targetInv.customer?.name,
+                                previousPaidAmount: prevPaid,
+                                previousBalanceAmount: Math.max(0, total - prevPaid),
+                                previousStatus: prevStatus
+                            });
+                        }
+                    } else {
+                        const targetPos = await prisma.posinvoice.findUnique({
+                            where: { id: alloc.invoiceId },
+                            include: { customer: { select: { id: true, name: true } } }
+                        });
+                        if (targetPos) {
+                            const prevPaid = Math.max(0, (targetPos.paidAmount || 0) - alloc.amount);
+                            const total = parseFloat(targetPos.totalAmount) || 0;
+                            const prevStatus = prevPaid <= 0.01 ? 'UNPAID' : (prevPaid >= total - 0.01 ? 'PAID' : 'PARTIAL');
+                            await logInvoicePaymentAdded(req, {
+                                ...targetPos,
+                                invoiceNumber: targetPos.invoiceNumber
+                            }, {
+                                amount: alloc.amount,
+                                receiptNumber: result.receiptNumber,
+                                receiptId: result.id,
+                                paymentMode: result.paymentMode,
+                                customerId: targetPos.customerId,
+                                customerName: targetPos.customer?.name,
+                                previousPaidAmount: prevPaid,
+                                previousBalanceAmount: Math.max(0, total - prevPaid),
+                                previousStatus: prevStatus
+                            });
+                        }
                     }
                 }
             }
@@ -808,7 +855,17 @@ const updateReceipt = async (req, res) => {
             return updatedReceipt;
         }, { timeout: 30000 });
 
-        logActivity(req, 'UPDATE', 'Receipt', result.id, `Receipt #${result.receiptNumber} updated`);
+        logActivity(req, 'UPDATE', 'Receipt', result.id, {
+            summary: `Receipt #${result.receiptNumber} updated for ${existingReceipt.customer?.name || `Customer #${result.customerId}`} (Amount: ${result.amount})`,
+            receiptNumber: result.receiptNumber,
+            receiptId: result.id,
+            customerId: result.customerId,
+            customerName: existingReceipt.customer?.name || null,
+            amount: result.amount,
+            paymentMode: result.paymentMode,
+            combinedInvoiceId: result.customerId ? `combined-CUST-${result.customerId}` : null,
+            allocations: normalizedNewAllocations.map(a => ({ invoiceId: a.invoiceId, invoiceType: a.invoiceType, amount: a.amount }))
+        });
 
         // Invoice audit logging for payment changed / added / removed
         try {
@@ -953,7 +1010,16 @@ const deleteReceipt = async (req, res) => {
             }
         }
 
-        logActivity(req, 'DELETE', 'Receipt', existingReceipt.id, `Receipt #${existingReceipt.receiptNumber} deleted`);
+        logActivity(req, 'DELETE', 'Receipt', existingReceipt.id, {
+            summary: `Receipt #${existingReceipt.receiptNumber} deleted for ${existingReceipt.customer?.name || `Customer #${existingReceipt.customerId}`} (Amount: ${existingReceipt.amount})`,
+            receiptNumber: existingReceipt.receiptNumber,
+            receiptId: existingReceipt.id,
+            customerId: existingReceipt.customerId,
+            customerName: existingReceipt.customer?.name || null,
+            amount: existingReceipt.amount,
+            combinedInvoiceId: existingReceipt.customerId ? `combined-CUST-${existingReceipt.customerId}` : null,
+            allocations: (existingReceipt.allocations || []).map(a => ({ invoiceId: a.invoiceId, amount: a.amount }))
+        });
 
         // Invoice audit logging for payment removed
         try {

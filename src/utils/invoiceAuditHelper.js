@@ -29,9 +29,12 @@ const logInvoiceCreated = async (req, invoice, items = []) => {
     try {
         const summary = `Invoice #${invoice.invoiceNumber} created with total ${fmtNum(invoice.totalAmount)} (${items.length} item${items.length === 1 ? '' : 's'})`;
 
+        const custId = invoice.customerId || null;
         const details = {
             invoiceNumber: invoice.invoiceNumber,
             invoiceId: invoice.id,
+            customerId: custId,
+            combinedInvoiceId: custId ? `combined-CUST-${custId}` : null,
             action: 'CREATE',
             summary,
             changes: [
@@ -290,9 +293,12 @@ const logInvoiceUpdated = async (req, oldInvoice, newInvoice, newItems = []) => 
             summary += ` (General settings / header information saved)`;
         }
 
+        const custId = newInvoice.customerId || oldInvoice.customerId || null;
         const details = {
             invoiceNumber: newInvoice.invoiceNumber,
             invoiceId: newInvoice.id,
+            customerId: custId,
+            combinedInvoiceId: custId ? `combined-CUST-${custId}` : null,
             action: 'UPDATE',
             summary,
             changedFields: changedFieldNames,
@@ -356,6 +362,7 @@ const logInvoiceDeleted = async (req, invoice) => {
             deletionPasswordVerified: true,
             customerName,
             customerId: invoice.customerId,
+            combinedInvoiceId: invoice.customerId ? `combined-CUST-${invoice.customerId}` : null,
             poNumber: invoice.poNumber || null,
             totalAmount: fmtNum(invoice.totalAmount),
             date: fmtDate(invoice.date),
@@ -423,18 +430,35 @@ const logInvoiceDeleted = async (req, invoice) => {
 const logInvoicePaymentAdded = async (req, invoice, paymentInfo) => {
     try {
         const paymentAmt = parseFloat(paymentInfo.amount) || 0;
+        const total = parseFloat(invoice.totalAmount) || 0;
         const oldPaid = parseFloat(paymentInfo.previousPaidAmount !== undefined ? paymentInfo.previousPaidAmount : (invoice.paidAmount || 0));
         const newPaid = oldPaid + paymentAmt;
-        const total = parseFloat(invoice.totalAmount) || 0;
+        const oldBalance = parseFloat(paymentInfo.previousBalanceAmount !== undefined ? paymentInfo.previousBalanceAmount : Math.max(0, total - oldPaid));
         const newBalance = Math.max(0, total - newPaid);
-        const oldStatus = invoice.status || 'UNPAID';
+
+        let oldStatus;
+        if (paymentInfo.previousStatus) {
+            oldStatus = paymentInfo.previousStatus;
+        } else if (oldPaid <= 0.001) {
+            oldStatus = isDuePassed(invoice.dueDate) ? 'OVERDUE' : 'UNPAID';
+        } else if (oldPaid >= total - 0.01) {
+            oldStatus = 'PAID';
+        } else {
+            oldStatus = isDuePassed(invoice.dueDate) ? 'OVERDUE' : 'PARTIAL';
+        }
+
         const newStatus = newBalance <= 0.01 ? 'PAID' : (isDuePassed(invoice.dueDate) ? 'OVERDUE' : (newPaid > 0 ? 'PARTIAL' : 'UNPAID'));
+        const custId = invoice.customerId || paymentInfo.customerId || null;
+        const custName = invoice.customer?.name || paymentInfo.customerName || (custId ? `Customer #${custId}` : 'Customer');
 
         const summary = `Payment of ${fmtNum(paymentAmt)} added to Invoice #${invoice.invoiceNumber} via ${paymentInfo.paymentMode || 'Receipt'} (${paymentInfo.receiptNumber ? `#${paymentInfo.receiptNumber}` : 'Payment'}). Paid: ${fmtNum(oldPaid)} → ${fmtNum(newPaid)}, Status: ${oldStatus} → ${newStatus}`;
 
         const details = {
             invoiceNumber: invoice.invoiceNumber,
             invoiceId: invoice.id,
+            customerId: custId,
+            customerName: custName,
+            combinedInvoiceId: custId ? `combined-CUST-${custId}` : null,
             action: 'PAYMENT_ADD',
             receiptNumber: paymentInfo.receiptNumber || null,
             receiptId: paymentInfo.receiptId || null,
@@ -442,12 +466,12 @@ const logInvoicePaymentAdded = async (req, invoice, paymentInfo) => {
             changes: [
                 { field: 'paymentAdded', fieldLabel: 'Payment Added', previousValue: '0', newValue: fmtNum(paymentAmt) },
                 { field: 'paidAmount', fieldLabel: 'Paid Amount', previousValue: fmtNum(oldPaid), newValue: fmtNum(newPaid) },
-                { field: 'balanceAmount', fieldLabel: 'Balance Amount', previousValue: fmtNum(invoice.balanceAmount), newValue: fmtNum(newBalance) },
+                { field: 'balanceAmount', fieldLabel: 'Balance Amount', previousValue: fmtNum(oldBalance), newValue: fmtNum(newBalance) },
                 { field: 'status', fieldLabel: 'Status', previousValue: oldStatus, newValue: newStatus }
             ],
             previousValue: {
                 paidAmount: oldPaid,
-                balanceAmount: invoice.balanceAmount,
+                balanceAmount: oldBalance,
                 status: oldStatus
             },
             newValue: {
@@ -475,11 +499,14 @@ const logInvoicePaymentUpdated = async (req, invoice, oldAllocAmt, newAllocAmt, 
         const newAmt = parseFloat(newAllocAmt) || 0;
         const delta = newAmt - oldAmt;
 
+        const custId = invoice.customerId || null;
         const summary = `Payment on Invoice #${invoice.invoiceNumber} updated from ${fmtNum(oldAmt)} to ${fmtNum(newAmt)} via Receipt #${receiptInfo.receiptNumber || ''}`;
 
         const details = {
             invoiceNumber: invoice.invoiceNumber,
             invoiceId: invoice.id,
+            customerId: custId,
+            combinedInvoiceId: custId ? `combined-CUST-${custId}` : null,
             action: 'PAYMENT_UPDATE',
             receiptNumber: receiptInfo.receiptNumber || null,
             summary,
@@ -510,11 +537,14 @@ const logInvoicePaymentRemoved = async (req, invoice, removedAmount, reason = 'P
         const newBalance = Math.max(0, total - newPaid);
         const newStatus = newBalance <= 0.01 ? 'PAID' : (isDuePassed(invoice.dueDate) ? 'OVERDUE' : (newPaid > 0 ? 'PARTIAL' : 'UNPAID'));
 
+        const custId = invoice.customerId || null;
         const summary = `Payment of ${fmtNum(amt)} removed from Invoice #${invoice.invoiceNumber} (${reason}). Paid: ${fmtNum(oldPaid)} → ${fmtNum(newPaid)}, Status: ${oldStatus} → ${newStatus}`;
 
         const details = {
             invoiceNumber: invoice.invoiceNumber,
             invoiceId: invoice.id,
+            customerId: custId,
+            combinedInvoiceId: custId ? `combined-CUST-${custId}` : null,
             action: 'PAYMENT_REMOVE',
             summary,
             changes: [
@@ -547,11 +577,14 @@ const logInvoiceStatusChanged = async (req, invoice, oldStatus, newStatus) => {
     try {
         if (oldStatus === newStatus) return;
 
+        const custId = invoice.customerId || null;
         const summary = `Invoice #${invoice.invoiceNumber} status changed from ${oldStatus} to ${newStatus}`;
 
         const details = {
             invoiceNumber: invoice.invoiceNumber,
             invoiceId: invoice.id,
+            customerId: custId,
+            combinedInvoiceId: custId ? `combined-CUST-${custId}` : null,
             action: 'STATUS_CHANGE',
             summary,
             changes: [
@@ -577,13 +610,15 @@ const logInvoiceDeletionFailed = async (req, invoice, reason = 'Incorrect invoic
         const customerName = invoice.customer?.name || (invoice.customerId ? `Customer #${invoice.customerId}` : 'N/A');
         const summary = `Failed deletion attempt on Invoice #${invoice.invoiceNumber || invoice.id}: ${reason}`;
 
+        const custId = invoice.customerId || null;
         const details = {
             invoiceNumber: invoice.invoiceNumber || String(invoice.id),
             invoiceId: invoice.id,
+            customerId: custId,
+            combinedInvoiceId: custId ? `combined-CUST-${custId}` : null,
             action: 'DELETE_FAILED',
             summary,
             customerName,
-            customerId: invoice.customerId,
             totalAmount: fmtNum(invoice.totalAmount),
             date: fmtDate(invoice.date),
             dueDate: fmtDate(invoice.dueDate),
