@@ -1748,6 +1748,7 @@ const getInvoiceById = async (req, res) => {
         let invoice = await prisma.invoice.findFirst({
             where: { id: parsedId, companyId: parseInt(companyId) },
             include: {
+                company: true,
                 salesperson: true,
                 invoiceitem: {
                     include: {

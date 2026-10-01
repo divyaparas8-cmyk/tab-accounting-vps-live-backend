@@ -1,4 +1,6 @@
 const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Generate a clean, professional Invoice PDF Buffer
@@ -55,6 +57,30 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
             // Header Background Accent (Light Grey / Company theme)
             doc.rect(40, 40, 515, 65).fill(bannerBgColor);
 
+            // Attempt to resolve and render company logo
+            const rawLogo = company?.invoiceLogo || company?.logo;
+            let logoRendered = false;
+            if (rawLogo && typeof rawLogo === 'string') {
+                try {
+                    let imgSource = null;
+                    if (rawLogo.startsWith('data:image/')) {
+                        const base64Data = rawLogo.replace(/^data:image\/\w+;base64,/, '');
+                        imgSource = Buffer.from(base64Data, 'base64');
+                    } else if (rawLogo.startsWith('/uploads/')) {
+                        const localPath = path.join(__dirname, '../../uploads', rawLogo.replace(/^\/uploads\//, ''));
+                        if (fs.existsSync(localPath)) {
+                            imgSource = localPath;
+                        }
+                    }
+                    if (imgSource) {
+                        doc.image(imgSource, 415, 45, { fit: [125, 55], align: 'right', valign: 'center' });
+                        logoRendered = true;
+                    }
+                } catch (logoErr) {
+                    // Ignore logo error and fall back to title text
+                }
+            }
+
             // Company Title
             doc.fillColor(bannerTitleColor)
                 .fontSize(18)
@@ -68,13 +94,15 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
                 .text(`${company?.email || ''} | ${company?.phone || ''}`, 55, 87);
 
             // Invoice Title & Number
-            doc.fillColor(bannerTitleColor)
-                .fontSize(20)
-                .font('Helvetica-Bold')
-                .text(docTitle, 380, 52, { align: 'right', width: 160 })
-                .fontSize(11)
-                .fillColor(bannerSubColor)
-                .text(`#${String(invoiceNumber).replace(/^#/, '')}`, 380, 75, { align: 'right', width: 160 });
+            if (!logoRendered) {
+                doc.fillColor(bannerTitleColor)
+                    .fontSize(20)
+                    .font('Helvetica-Bold')
+                    .text(docTitle, 380, 52, { align: 'right', width: 160 })
+                    .fontSize(11)
+                    .fillColor(bannerSubColor)
+                    .text(`#${String(invoiceNumber).replace(/^#/, '')}`, 380, 75, { align: 'right', width: 160 });
+            }
 
             // Billing & Invoice Metadata
             let y = 125;
