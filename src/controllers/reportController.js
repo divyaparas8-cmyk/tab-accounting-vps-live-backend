@@ -317,13 +317,13 @@ const getOverdueInvoicesLast365Days = async (companyId) => {
 
 const getSalesReport = async (req, res) => {
     try {
-        const companyId = req.user?.companyId || req.query.companyId;
+        const companyId = (req.query.companyId && req.query.companyId !== 'undefined' && req.query.companyId !== 'null') ? req.query.companyId : req.user?.companyId;
 
         if (!companyId) {
             return res.status(400).json({ success: false, message: 'Company ID is required' });
         }
 
-        const { startDate, endDate, transactionFilter, customerId, productId } = req.query; // 'ALL', 'SALES', 'RETURNS'
+        const { startDate, endDate, period, transactionFilter, customerId, productId } = req.query; // 'ALL', 'SALES', 'RETURNS'
 
         let whereClause = {
             companyId: parseInt(companyId)
@@ -339,11 +339,28 @@ const getSalesReport = async (req, res) => {
             };
         }
 
-        if (startDate && endDate) {
-            whereClause.date = {
-                gte: new Date(startDate),
-                lte: toEndOfDay(endDate)
-            };
+        let filterStart = null;
+        let filterEnd = null;
+
+        if (period && ['30', '60', '90'].includes(String(period))) {
+            const pDays = parseInt(period);
+            const nowTime = new Date();
+            filterEnd = toEndOfDay(nowTime);
+            filterStart = new Date(nowTime.getTime() - pDays * 24 * 60 * 60 * 1000);
+            filterStart.setHours(0, 0, 0, 0);
+        } else if (startDate && endDate) {
+            filterStart = new Date(startDate);
+            filterEnd = toEndOfDay(endDate);
+        } else if (startDate) {
+            filterStart = new Date(startDate);
+        } else if (endDate) {
+            filterEnd = toEndOfDay(endDate);
+        }
+
+        if (filterStart || filterEnd) {
+            whereClause.date = {};
+            if (filterStart) whereClause.date.gte = filterStart;
+            if (filterEnd) whereClause.date.lte = filterEnd;
         }
 
         let salesReport = [];
@@ -357,6 +374,18 @@ const getSalesReport = async (req, res) => {
                         include: {
                             product: { include: { category: true, stock: true } },
                             warehouse: true
+                        }
+                    },
+                    receipt: {
+                        select: { id: true, date: true, amount: true, receiptNumber: true, paymentMode: true }
+                    },
+                    allocations: {
+                        select: {
+                            id: true,
+                            amount: true,
+                            receipt: {
+                                select: { id: true, date: true, amount: true, receiptNumber: true, paymentMode: true }
+                            }
                         }
                     }
                 },
@@ -534,11 +563,23 @@ const getSalesReport = async (req, res) => {
             totalSales: 0,
             totalReturns: 0,
             netRevenue: 0,
+            grossRevenue: 0,
+            returnsRevenue: 0,
+            cogs: 0,
+            operatingExpenses: 0,
+            otherExpenses: 0,
+            otherIncome: 0,
+            totalExpenses: 0,
+            netProfitLoss: 0,
+            profitStatus: 'BREAK_EVEN',
+            hasExpenseData: false,
             totalAmount: 0,
             totalPaid: 0,
             totalUnpaid: 0,
             overdue: 0
         };
+
+        let recognizedSalesRevenue = 0;
 
         allSales.forEach(inv => {
             const total = parseFloat(inv.totalAmount || 0);
@@ -555,13 +596,268 @@ const getSalesReport = async (req, res) => {
             if (inv.dueDate && new Date(inv.dueDate) < now && unpaid > 0) {
                 summary.overdue += unpaid;
             }
+
+            // Recognized Sales Revenue (Accrual, Excluding VAT/Tax)
+            const sub = parseFloat(inv.subtotal || 0);
+            const disc = parseFloat(inv.discountAmount || 0);
+            const tax = parseFloat(inv.taxAmount || 0);
+            let netSale = sub - disc;
+            if (netSale <= 0 && total > 0) {
+                netSale = Math.max(0, total - tax);
+            }
+            recognizedSalesRevenue += Math.max(0, netSale);
         });
+
+        let recognizedReturnsRevenue = 0;
 
         convertedReturns.forEach(ret => {
-            summary.totalReturns += ret.totalAmount || 0;
+            summary.totalReturns += parseFloat(ret.totalAmount || 0);
+
+            // Pre-tax return value
+            let retPreTax = 0;
+            if (Array.isArray(ret.invoiceitem) && ret.invoiceitem.length > 0) {
+                retPreTax = ret.invoiceitem.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+            } else {
+                const retSub = parseFloat(ret.subtotal || 0);
+                const retDisc = parseFloat(ret.discountAmount || 0);
+                const retTax = parseFloat(ret.taxAmount || 0);
+                const retTot = parseFloat(ret.totalAmount || 0);
+                retPreTax = retSub > 0 ? Math.max(0, retSub - retDisc) : Math.max(0, retTot - retTax);
+            }
+            recognizedReturnsRevenue += Math.max(0, retPreTax);
         });
 
-        summary.netRevenue = summary.totalSales - summary.totalReturns;
+        // -------------------------------------------------------------
+        // PAYMENT-BASED NET REVENUE (Customer payments received, excluding VAT/tax, net of returns)
+        // -------------------------------------------------------------
+        const receiptWhere = {
+            companyId: parseInt(companyId),
+            status: { notIn: ['CANCELLED', 'REJECTED'] }
+        };
+        if (filterStart || filterEnd) {
+            receiptWhere.date = {};
+            if (filterStart) receiptWhere.date.gte = filterStart;
+            if (filterEnd) receiptWhere.date.lte = filterEnd;
+        }
+
+        const periodReceipts = await prisma.receipt.findMany({
+            where: receiptWhere,
+            include: {
+                invoice: {
+                    select: {
+                        id: true,
+                        totalAmount: true,
+                        subtotal: true,
+                        discountAmount: true,
+                        taxAmount: true,
+                        currency: true
+                    }
+                },
+                allocations: {
+                    include: {
+                        invoice: {
+                            select: {
+                                id: true,
+                                totalAmount: true,
+                                subtotal: true,
+                                discountAmount: true,
+                                taxAmount: true,
+                                currency: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        let totalPaymentReceivedRevenue = 0;
+        const includeInvoices = !transactionFilter || transactionFilter === 'ALL' || transactionFilter === 'SALES' || transactionFilter === 'INVOICE';
+        const includePos = !transactionFilter || transactionFilter === 'ALL' || transactionFilter === 'SALES' || transactionFilter === 'POS';
+
+        if (includeInvoices) {
+            for (const r of periodReceipts) {
+                const rRate = (!r.currency || r.currency.toUpperCase() === (companyCurrency || 'EUR').toUpperCase())
+                    ? 1.0
+                    : await getConversionRate(r.currency, companyCurrency);
+
+                if (r.allocations && r.allocations.length > 0) {
+                    for (const alloc of r.allocations) {
+                        const allocAmount = parseFloat(alloc.amount || 0);
+                        if (allocAmount <= 0.005) continue;
+
+                        const inv = alloc.invoice;
+                        if (inv) {
+                            const invRate = (!inv.currency || inv.currency.toUpperCase() === (companyCurrency || 'EUR').toUpperCase())
+                                ? 1.0
+                                : await getConversionRate(inv.currency, companyCurrency);
+
+                            totalPaymentReceivedRevenue += (allocAmount * invRate);
+                        } else {
+                            totalPaymentReceivedRevenue += (allocAmount * rRate);
+                        }
+                    }
+                } else if (r.invoice) {
+                    const rAmount = parseFloat(r.amount || 0);
+                    if (rAmount > 0.005) {
+                        const inv = r.invoice;
+                        const invRate = (!inv.currency || inv.currency.toUpperCase() === (companyCurrency || 'EUR').toUpperCase())
+                            ? 1.0
+                            : await getConversionRate(inv.currency, companyCurrency);
+
+                        totalPaymentReceivedRevenue += (rAmount * invRate);
+                    }
+                } else {
+                    // Unallocated advance customer payment
+                    const rAmount = parseFloat(r.amount || 0);
+                    if (rAmount > 0.005) {
+                        totalPaymentReceivedRevenue += (rAmount * rRate);
+                    }
+                }
+            }
+        }
+
+        if (includePos) {
+            for (const pos of convertedPosSales) {
+                const posPaid = parseFloat(pos.paidAmount || 0);
+                const posTotal = parseFloat(pos.totalAmount || 0);
+                if (posPaid > 0.005 && posTotal > 0.005) {
+                    totalPaymentReceivedRevenue += Math.min(posPaid, posTotal);
+                }
+            }
+        }
+
+        // Full customer payment received, net of customer returns
+        const paymentNetRevenue = Math.max(0, Math.round((totalPaymentReceivedRevenue - summary.totalReturns) * 100) / 100);
+        const netRevenue = paymentNetRevenue;
+        summary.netRevenue = paymentNetRevenue;
+        summary.paymentNetRevenue = paymentNetRevenue;
+        summary.accrualNetRevenue = Math.max(0, Math.round((recognizedSalesRevenue - recognizedReturnsRevenue) * 100) / 100);
+        summary.grossRevenue = Math.round(recognizedSalesRevenue * 100) / 100;
+        summary.returnsRevenue = Math.round(recognizedReturnsRevenue * 100) / 100;
+
+        // Synchronized Expense and COGS Aggregation for Net Profit/Loss
+        const txWhere = {
+            companyId: parseInt(companyId)
+        };
+        if (filterStart || filterEnd) {
+            txWhere.date = {};
+            if (filterStart) txWhere.date.gte = filterStart;
+            if (filterEnd) txWhere.date.lte = filterEnd;
+        }
+
+        const expenseAndIncomeLedgers = await prisma.ledger.findMany({
+            where: {
+                companyId: parseInt(companyId),
+                accountgroup: {
+                    type: { in: ['INCOME', 'EXPENSES'] }
+                }
+            },
+            include: {
+                accountgroup: true,
+                accountsubgroup: true
+            }
+        });
+
+        const transactions = await prisma.transaction.findMany({
+            where: txWhere
+        });
+
+        let cogsTotal = 0;
+        let operatingExpensesTotal = 0;
+        let otherExpensesTotal = 0;
+        let otherIncomeTotal = 0;
+        let totalIncome = 0;
+        let totalExpense = 0;
+        let expenseTxCount = 0;
+
+        const isFullYearOrAll = (!filterStart && !filterEnd) || (filterStart && filterEnd && new Date(filterStart).getUTCMonth() === 0 && new Date(filterStart).getUTCDate() === 1 && new Date(filterEnd).getUTCMonth() === 11 && new Date(filterEnd).getUTCDate() >= 30);
+
+        const ledgerValues = {};
+        expenseAndIncomeLedgers.forEach(l => {
+            const openBal = isFullYearOrAll ? parseFloat(l.openingBalance || 0) : 0;
+            ledgerValues[l.id] = openBal;
+            if (l.accountgroup.type === 'INCOME') totalIncome += openBal;
+            if (l.accountgroup.type === 'EXPENSES') totalExpense += openBal;
+        });
+
+        transactions.forEach(txn => {
+            const amount = parseFloat(txn.amount || 0);
+            const debitLedger = expenseAndIncomeLedgers.find(l => l.id === txn.debitLedgerId);
+            const creditLedger = expenseAndIncomeLedgers.find(l => l.id === txn.creditLedgerId);
+
+            if (debitLedger) {
+                if (debitLedger.accountgroup.type === 'EXPENSES') {
+                    totalExpense += amount;
+                    ledgerValues[debitLedger.id] = (ledgerValues[debitLedger.id] || 0) + amount;
+                    expenseTxCount++;
+                } else if (debitLedger.accountgroup.type === 'INCOME') {
+                    totalIncome -= amount;
+                    ledgerValues[debitLedger.id] = (ledgerValues[debitLedger.id] || 0) - amount;
+                }
+            }
+
+            if (creditLedger) {
+                if (creditLedger.accountgroup.type === 'INCOME') {
+                    totalIncome += amount;
+                    ledgerValues[creditLedger.id] = (ledgerValues[creditLedger.id] || 0) + amount;
+                } else if (creditLedger.accountgroup.type === 'EXPENSES') {
+                    totalExpense -= amount;
+                    ledgerValues[creditLedger.id] = (ledgerValues[creditLedger.id] || 0) - amount;
+                    expenseTxCount++;
+                }
+            }
+        });
+
+        expenseAndIncomeLedgers.forEach(ledger => {
+            const val = ledgerValues[ledger.id] || 0;
+            const groupType = ledger.accountgroup.type;
+            const subGroupName = ledger.accountsubgroup?.name?.toLowerCase() || '';
+            const ledgerName = ledger.name.toLowerCase();
+
+            if (groupType === 'EXPENSES') {
+                if (subGroupName.includes('direct') ||
+                    ledgerName.includes('cost of goods sold') ||
+                    ledgerName.includes('cogs') ||
+                    ledgerName.includes('purchases')) {
+                    cogsTotal += val;
+                } else if (subGroupName.includes('other')) {
+                    otherExpensesTotal += val;
+                } else {
+                    operatingExpensesTotal += val;
+                }
+            } else if (groupType === 'INCOME') {
+                if (subGroupName.includes('other')) {
+                    otherIncomeTotal += val;
+                }
+            }
+        });
+
+        // Exact formula matching Financial Report Profit & Loss:
+        // Net Profit/Loss = Total Income - Total Expense
+        const roundedTotalIncome = Math.round(totalIncome * 100) / 100;
+        const roundedTotalExpenses = Math.round(totalExpense * 100) / 100;
+        const netProfitLoss = Math.round((totalIncome - totalExpense) * 100) / 100;
+        let profitStatus = 'BREAK_EVEN';
+        if (netProfitLoss > 0.005) {
+            profitStatus = 'PROFIT';
+        } else if (netProfitLoss < -0.005) {
+            profitStatus = 'LOSS';
+        }
+
+        summary.cogs = Math.round(cogsTotal * 100) / 100;
+        summary.operatingExpenses = Math.round(operatingExpensesTotal * 100) / 100;
+        summary.otherExpenses = Math.round(otherExpensesTotal * 100) / 100;
+        summary.otherIncome = Math.round(otherIncomeTotal * 100) / 100;
+        summary.totalIncome = roundedTotalIncome;
+        summary.totalExpense = roundedTotalExpenses;
+        summary.totalExpenses = roundedTotalExpenses;
+        summary.netProfitLoss = netProfitLoss;
+        summary.netProfit = netProfitLoss;
+        summary.profitStatus = profitStatus;
+        summary.hasExpenseData = (expenseTxCount > 0 || totalExpense > 0);
+        summary.periodDays = period ? parseInt(period) : null;
+        summary.startDate = filterStart ? filterStart.toISOString() : null;
+        summary.endDate = filterEnd ? filterEnd.toISOString() : null;
 
         // Calculate authoritative Overdue Invoices for the Last 365 Days
         const overdueData = await getOverdueInvoicesLast365Days(companyId);
