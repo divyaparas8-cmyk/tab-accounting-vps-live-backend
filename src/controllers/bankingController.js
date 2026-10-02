@@ -204,10 +204,10 @@ const getBankAccounts = async (req, res) => {
                 where: { id: companyId }
             });
 
-            if (bankLedger || company?.bankName || company?.accountNumber) {
-                const accName = company?.accountName || bankLedger?.name || 'Main Bank Account';
-                const bName = company?.bankName || 'Bank of Ireland';
-                const accNum = company?.accountNumber || '123456789076';
+            if (company?.bankName || company?.accountNumber) {
+                const accName = company?.accountName || company?.accountHolder || bankLedger?.name || 'Main Bank Account';
+                const bName = company?.bankName || '';
+                const accNum = company?.accountNumber || '';
                 const cur = company?.currency || 'EUR';
                 const bal = bankLedger ? Number(bankLedger.currentBalance || 0) : 0;
                 const ledId = bankLedger ? bankLedger.id : null;

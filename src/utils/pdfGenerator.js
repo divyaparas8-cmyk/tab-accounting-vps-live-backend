@@ -2,6 +2,39 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 
+const resolveCompanyAddressLines = (comp) => {
+    if (!comp) return [];
+    const lines = [];
+    if (comp.address && comp.address.trim()) {
+        const rawLines = comp.address.trim().split(/\r?\n+/);
+        rawLines.forEach(l => {
+            const trimmed = l.trim().replace(/,\s*$/, '');
+            if (trimmed) lines.push(trimmed);
+        });
+    }
+    const locParts = [];
+    if (comp.city && comp.city.trim()) {
+        locParts.push(comp.city.trim().replace(/,\s*$/, ''));
+    }
+    if (comp.state && comp.state.trim()) {
+        locParts.push(comp.state.trim().replace(/,\s*$/, ''));
+    }
+    const cityState = locParts.join(', ');
+    const fullLoc = [cityState, (comp.zip || '').trim()].filter(Boolean).join(' ');
+
+    const alreadyPresent = lines.some(l => l.toLowerCase().includes(fullLoc.toLowerCase())) ||
+        (comp.address && comp.address.toLowerCase().includes(fullLoc.toLowerCase()));
+
+    if (fullLoc && !alreadyPresent) {
+        lines.push(fullLoc);
+    }
+    if (lines.length === 0 && (comp.city || comp.state || comp.zip)) {
+        const fallbackLoc = [comp.city, comp.state, comp.zip].filter(Boolean).join(', ');
+        if (fallbackLoc) lines.push(fallbackLoc);
+    }
+    return lines;
+};
+
 /**
  * Generate a clean, professional Invoice PDF Buffer
  * @param {Object} options
@@ -87,11 +120,23 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
                 .font('Helvetica-Bold')
                 .text(companyName, 55, 52);
 
-            doc.fontSize(9)
-                .font('Helvetica')
-                .fillColor(bannerMetaColor)
-                .text(`VAT/Tax No: ${company?.vatNumber || company?.gstNumber || 'N/A'}`, 55, 74)
-                .text(`${company?.email || ''} | ${company?.phone || ''}`, 55, 87);
+            // Company info (VAT ID omitted if not provided)
+            let headerMetaY = 74;
+            const vatId = company?.vatNumber || company?.gstNumber || company?.taxNumber;
+            if (vatId) {
+                doc.fontSize(9)
+                    .font('Helvetica')
+                    .fillColor(bannerMetaColor)
+                    .text(`VAT ID: ${vatId}`, 55, headerMetaY);
+                headerMetaY += 13;
+            }
+            const contactLine = [company?.email, company?.phone].filter(Boolean).join(' | ');
+            if (contactLine) {
+                doc.fontSize(9)
+                    .font('Helvetica')
+                    .fillColor(bannerMetaColor)
+                    .text(contactLine, 55, headerMetaY);
+            }
 
             // Invoice Title & Number
             if (!logoRendered) {
@@ -472,23 +517,52 @@ const generateInvoicePdfBuffer = ({ invoice, company }) => {
             doc.text(computedStatus, 440, y, { align: 'right', width: 115 });
             y += 22;
 
-            // Bank details (if available)
-            if (company?.iban || company?.accountNumber) {
-                if (y + 55 > 750) {
+            // Bank details & Company Address box (if available)
+            const bankLines = [];
+            const bAccName = company?.accountName || company?.accountHolder || '';
+            if (bAccName) bankLines.push(`Account Name : ${bAccName}`);
+            if (company?.bankName) bankLines.push(`Bank Name: ${company.bankName}`);
+            if (company?.accountNumber) bankLines.push(`Account Number: ${company.accountNumber}`);
+            if (company?.iban) bankLines.push(`IBAN: ${company.iban}`);
+            if (company?.sortCode) bankLines.push(`Sort Code: ${company.sortCode}`);
+            if (company?.bic) bankLines.push(`BIC: ${company.bic}`);
+
+            const compAddrLines = resolveCompanyAddressLines(company);
+            const hasBank = bankLines.length > 0;
+            const hasAddr = compAddrLines.length > 0;
+
+            if (hasBank || hasAddr) {
+                const maxLines = Math.max(bankLines.length, hasAddr ? compAddrLines.length + 1 : 0, 1);
+                const boxHeight = Math.max(40, 20 + (maxLines * 9.5));
+                if (y + boxHeight + 10 > 750) {
                     doc.addPage();
                     y = 50;
                 }
-                doc.rect(40, y, 515, 50).fill('#f8fafc').strokeColor('#cbd5e1').stroke();
-                doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(8.5).text('PAYMENT / BANK TRANSFER DETAILS', 50, y + 6);
-                doc.font('Helvetica').fontSize(7.5).fillColor('#475569');
-                let bankInfo = `Bank: ${company?.bankName || 'N/A'}   |   Account Name: ${company?.accountName || companyName}\n`;
-                if (company?.iban) bankInfo += `IBAN: ${company.iban}   |   `;
-                if (company?.bic) bankInfo += `BIC/SWIFT: ${company.bic}   |   `;
-                if (company?.accountNumber) bankInfo += `Account No: ${company.accountNumber}   |   `;
-                if (company?.sortCode) bankInfo += `Sort Code: ${company.sortCode}\n`;
-                bankInfo += `Reference: ${invoiceNumber}`;
-                doc.text(bankInfo, 50, y + 18, { width: 495, lineGap: 2 });
-                y += 56;
+                doc.rect(40, y, 515, boxHeight).fill('#f8fafc').strokeColor('#cbd5e1').stroke();
+                
+                // Left Column: Bank Details
+                if (hasBank) {
+                    doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(8).text('BANK DETAILS', 52, y + 6);
+                    doc.font('Helvetica').fontSize(7.2).fillColor('#475569');
+                    let bankDetailsY = y + 18;
+                    bankLines.forEach(bl => {
+                        doc.text(bl, 52, bankDetailsY);
+                        bankDetailsY += 9;
+                    });
+                }
+
+                // Right Column: Company Address (Right Aligned on the right side)
+                if (hasAddr) {
+                    doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(8).text('COMPANY ADDRESS', 320, y + 6, { width: 220, align: 'right' });
+                    doc.font('Helvetica').fontSize(7.2).fillColor('#475569');
+                    let addrY = y + 18;
+                    compAddrLines.forEach(line => {
+                        doc.text(line, 320, addrY, { width: 220, align: 'right' });
+                        addrY += 9;
+                    });
+                }
+
+                y += boxHeight + 8;
             }
 
             // For combined invoices, add Invoices Included summary table
