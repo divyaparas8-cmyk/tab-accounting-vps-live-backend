@@ -17,6 +17,71 @@ const roundTo = (val, decimals = 2) => {
     return Math.round(val * factor) / factor;
 };
 
+const { getConversionRate } = require('../utils/currencyConverter');
+
+const convertInvoiceToCompanyCurrency = async (inv, targetCurrency) => {
+    if (!inv || !targetCurrency) return inv;
+    const invCurr = (inv.currency || 'EUR').toUpperCase();
+    const targetCurr = targetCurrency.toUpperCase();
+    if (invCurr === targetCurr) return inv;
+
+    try {
+        const rate = await getConversionRate(invCurr, targetCurr);
+        if (!rate || isNaN(rate) || rate === 1.0) return inv;
+
+        const convertedItems = (inv.invoiceitem || inv.items || []).map(item => ({
+            ...item,
+            rate: roundTo((parseFloat(item.rate) || 0) * rate, 4),
+            amount: roundTo((parseFloat(item.amount) || 0) * rate, 2),
+            taxAmount: roundTo((parseFloat(item.taxAmount) || 0) * rate, 2),
+            discountAmount: roundTo((parseFloat(item.discountAmount) || 0) * rate, 2)
+        }));
+
+        const convertedAllocations = (inv.allocations || []).map(alloc => ({
+            ...alloc,
+            amount: roundTo((parseFloat(alloc.amount) || 0) * rate, 2),
+            balanceBeforePayment: alloc.balanceBeforePayment != null ? roundTo(parseFloat(alloc.balanceBeforePayment) * rate, 2) : undefined,
+            balanceAfterPayment: alloc.balanceAfterPayment != null ? roundTo(parseFloat(alloc.balanceAfterPayment) * rate, 2) : undefined,
+            receipt: alloc.receipt ? {
+                ...alloc.receipt,
+                amount: roundTo((parseFloat(alloc.receipt.amount) || 0) * rate, 2)
+            } : alloc.receipt
+        }));
+
+        const convertedReceipts = (inv.receipt || []).map(r => ({
+            ...r,
+            amount: roundTo((parseFloat(r.amount) || 0) * rate, 2),
+            balanceBeforePayment: r.balanceBeforePayment != null ? roundTo(parseFloat(r.balanceBeforePayment) * rate, 2) : undefined,
+            balanceAfterPayment: r.balanceAfterPayment != null ? roundTo(parseFloat(r.balanceAfterPayment) * rate, 2) : undefined
+        }));
+
+        return {
+            ...inv,
+            currency: targetCurr,
+            subtotal: roundTo((parseFloat(inv.subtotal) || 0) * rate, 2),
+            discountAmount: roundTo((parseFloat(inv.discountAmount) || 0) * rate, 2),
+            taxableAmount: roundTo((parseFloat(inv.taxableAmount) || 0) * rate, 2),
+            taxAmount: roundTo((parseFloat(inv.taxAmount) || 0) * rate, 2),
+            otherCharges: roundTo((parseFloat(inv.otherCharges) || 0) * rate, 2),
+            roundOffAmount: roundTo((parseFloat(inv.roundOffAmount) || 0) * rate, 2),
+            totalAmount: roundTo((parseFloat(inv.totalAmount) || 0) * rate, 2),
+            paidAmount: roundTo((parseFloat(inv.paidAmount) || 0) * rate, 2),
+            balanceAmount: roundTo((parseFloat(inv.balanceAmount) || 0) * rate, 2),
+            invoiceitem: convertedItems,
+            items: convertedItems,
+            allocations: convertedAllocations,
+            receipt: convertedReceipts,
+            _isConverted: true,
+            originalCurrency: invCurr,
+            originalTotalAmount: inv.totalAmount,
+            originalBalanceAmount: inv.balanceAmount
+        };
+    } catch (e) {
+        console.error('Error converting invoice currency in backend:', e);
+        return inv;
+    }
+};
+
 // Authoritative helper to map allocations to invoice receipts without inflating advance/whole-receipt amounts
 const getDeduplicatedInvoiceReceipts = (invoice) => {
     if (!invoice) return [];
@@ -1677,18 +1742,23 @@ const getInvoiceById = async (req, res) => {
                 });
             }
 
-            const subtotal = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.subtotal) || 0), 0);
-            const discountAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.discountAmount) || 0), 0);
-            const taxableAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxableAmount) || 0), 0);
-            const taxAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxAmount) || 0), 0);
-            const otherCharges = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.otherCharges) || 0), 0);
-            const roundOffAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.roundOffAmount) || 0), 0);
-            const totalAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
-            const paidAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.paidAmount) || 0), 0);
-            const balanceAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || 0), 0);
+            const targetCurrency = company?.currency || customerInvoices[0]?.currency || 'EUR';
+            const convertedInvoices = await Promise.all(
+                customerInvoices.map(inv => convertInvoiceToCompanyCurrency(inv, targetCurrency))
+            );
+
+            const subtotal = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.subtotal) || 0), 0);
+            const discountAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.discountAmount) || 0), 0);
+            const taxableAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxableAmount) || 0), 0);
+            const taxAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxAmount) || 0), 0);
+            const otherCharges = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.otherCharges) || 0), 0);
+            const roundOffAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.roundOffAmount) || 0), 0);
+            const totalAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
+            const paidAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.paidAmount) || 0), 0);
+            const balanceAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || 0), 0);
 
             const combinedItems = [];
-            customerInvoices.forEach(inv => {
+            convertedInvoices.forEach(inv => {
                 (inv.invoiceitem || []).forEach(item => {
                     combinedItems.push({
                         ...item,
@@ -1702,17 +1772,17 @@ const getInvoiceById = async (req, res) => {
             });
 
             const allPaid = balanceAmount <= 0.01 && (totalAmount > 0 || paidAmount > 0);
-            const anyOverdue = customerInvoices.some(i => i.status === 'OVERDUE');
-            const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || customerInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
+            const anyOverdue = convertedInvoices.some(i => i.status === 'OVERDUE');
+            const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || convertedInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
             const combinedStatus = allPaid ? 'PAID' : (anyOverdue ? 'OVERDUE' : (hasPartial ? 'PARTIALLY PAID' : 'UNPAID'));
 
-            const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(customerInvoices, totalAmount);
+            const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(convertedInvoices, totalAmount);
 
             const combinedInvoice = {
                 id: rawId,
                 invoiceNumber: rawId.toUpperCase(),
                 date: new Date(),
-                dueDate: customerInvoices[0]?.dueDate || null,
+                dueDate: convertedInvoices[0]?.dueDate || null,
                 subtotal,
                 discountAmount,
                 taxableAmount,
@@ -1724,13 +1794,13 @@ const getInvoiceById = async (req, res) => {
                 balanceAmount,
                 status: combinedStatus,
                 manualStatus: false,
-                currency: customerInvoices[0]?.currency || company?.currency || 'EUR',
+                currency: targetCurrency,
                 customerId: custId,
                 customer: customer || { name: customer?.name || 'Customer' },
                 isCombined: true,
                 invoiceitem: combinedItems,
                 items: combinedItems,
-                invoices: customerInvoices,
+                invoices: convertedInvoices,
                 allocations: allAllocations,
                 receipt: paymentHistory,
                 paymentHistory,
@@ -3259,18 +3329,24 @@ const getPublicInvoiceById = async (req, res) => {
                 });
             }
 
-            const subtotal = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.subtotal) || 0), 0);
-            const discountAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.discountAmount) || 0), 0);
-            const taxableAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxableAmount) || 0), 0);
-            const taxAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxAmount) || 0), 0);
-            const otherCharges = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.otherCharges) || 0), 0);
-            const roundOffAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.roundOffAmount) || 0), 0);
-            const totalAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
-            const paidAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.paidAmount) || 0), 0);
-            const balanceAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || 0), 0);
+            const company = customerInvoices[0]?.company || null;
+            const targetCurrency = company?.currency || customerInvoices[0]?.currency || 'EUR';
+            const convertedInvoices = await Promise.all(
+                customerInvoices.map(inv => convertInvoiceToCompanyCurrency(inv, targetCurrency))
+            );
+
+            const subtotal = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.subtotal) || 0), 0);
+            const discountAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.discountAmount) || 0), 0);
+            const taxableAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxableAmount) || 0), 0);
+            const taxAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxAmount) || 0), 0);
+            const otherCharges = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.otherCharges) || 0), 0);
+            const roundOffAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.roundOffAmount) || 0), 0);
+            const totalAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
+            const paidAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.paidAmount) || 0), 0);
+            const balanceAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || 0), 0);
 
             const combinedItems = [];
-            customerInvoices.forEach(inv => {
+            convertedInvoices.forEach(inv => {
                 (inv.invoiceitem || []).forEach(item => {
                     combinedItems.push({
                         ...item,
@@ -3284,12 +3360,11 @@ const getPublicInvoiceById = async (req, res) => {
             });
 
             const allPaid = balanceAmount <= 0.01 && (totalAmount > 0 || paidAmount > 0);
-            const anyOverdue = customerInvoices.some(i => i.status === 'OVERDUE');
-            const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || customerInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
+            const anyOverdue = convertedInvoices.some(i => i.status === 'OVERDUE');
+            const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || convertedInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
             const combinedStatus = allPaid ? 'PAID' : (anyOverdue ? 'OVERDUE' : (hasPartial ? 'PARTIALLY PAID' : 'UNPAID'));
 
-            const company = customerInvoices[0]?.company || null;
-            const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(customerInvoices, totalAmount);
+            const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(convertedInvoices, totalAmount);
 
             const combinedInvoice = {
                 id: rawId,
@@ -3307,12 +3382,12 @@ const getPublicInvoiceById = async (req, res) => {
                 balanceAmount,
                 status: combinedStatus,
                 manualStatus: false,
-                currency: customerInvoices[0]?.currency || company?.currency || 'EUR',
+                currency: targetCurrency,
                 customer: customer || { name: customer?.name || 'Customer' },
                 isCombined: true,
                 invoiceitem: combinedItems,
                 items: combinedItems,
-                invoices: customerInvoices,
+                invoices: convertedInvoices,
                 allocations: allAllocations,
                 receipt: paymentHistory,
                 paymentHistory,
@@ -3457,18 +3532,24 @@ const downloadPublicInvoicePdf = async (req, res) => {
                 return res.status(404).json({ success: false, message: 'No invoices found for this customer' });
             }
 
-            const subtotal = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.subtotal) || 0), 0);
-            const discountAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.discountAmount) || 0), 0);
-            const taxableAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxableAmount) || 0), 0);
-            const taxAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxAmount) || 0), 0);
-            const otherCharges = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.otherCharges) || 0), 0);
-            const roundOffAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.roundOffAmount) || 0), 0);
-            const totalAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
-            const paidAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.paidAmount) || 0), 0);
-            const balanceAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || 0), 0);
+            company = customerInvoices[0]?.company || null;
+            const targetCurrency = company?.currency || customerInvoices[0]?.currency || 'EUR';
+            const convertedInvoices = await Promise.all(
+                customerInvoices.map(inv => convertInvoiceToCompanyCurrency(inv, targetCurrency))
+            );
+
+            const subtotal = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.subtotal) || 0), 0);
+            const discountAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.discountAmount) || 0), 0);
+            const taxableAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxableAmount) || 0), 0);
+            const taxAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxAmount) || 0), 0);
+            const otherCharges = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.otherCharges) || 0), 0);
+            const roundOffAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.roundOffAmount) || 0), 0);
+            const totalAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
+            const paidAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.paidAmount) || 0), 0);
+            const balanceAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || 0), 0);
 
             const combinedItems = [];
-            customerInvoices.forEach(inv => {
+            convertedInvoices.forEach(inv => {
                 (inv.invoiceitem || []).forEach(item => {
                     combinedItems.push({
                         ...item,
@@ -3478,12 +3559,11 @@ const downloadPublicInvoicePdf = async (req, res) => {
             });
 
             const allPaid = balanceAmount <= 0.01 && (totalAmount > 0 || paidAmount > 0);
-            const anyOverdue = customerInvoices.some(i => i.status === 'OVERDUE');
-            const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || customerInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
+            const anyOverdue = convertedInvoices.some(i => i.status === 'OVERDUE');
+            const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || convertedInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
             const combinedStatus = allPaid ? 'PAID' : (anyOverdue ? 'OVERDUE' : (hasPartial ? 'PARTIALLY PAID' : 'UNPAID'));
 
-            company = customerInvoices[0]?.company || null;
-            const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(customerInvoices, totalAmount);
+            const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(convertedInvoices, totalAmount);
 
             invoice = {
                 id: rawId,
@@ -3501,12 +3581,12 @@ const downloadPublicInvoicePdf = async (req, res) => {
                 balanceAmount,
                 status: combinedStatus,
                 manualStatus: false,
-                currency: customerInvoices[0]?.currency || company?.currency || 'EUR',
+                currency: targetCurrency,
                 customer: customer || { name: customer?.name || 'Customer' },
                 isCombined: true,
                 invoiceitem: combinedItems,
                 items: combinedItems,
-                invoices: customerInvoices,
+                invoices: convertedInvoices,
                 allocations: allAllocations,
                 receipt: paymentHistory,
                 paymentHistory,
@@ -3572,6 +3652,10 @@ const downloadPublicInvoicePdf = async (req, res) => {
                 ...invoice,
                 receipt: deduplicatedReceipts
             });
+
+            if (company?.currency && invoice?.currency && invoice.currency.toUpperCase() !== company.currency.toUpperCase()) {
+                invoice = await convertInvoiceToCompanyCurrency(invoice, company.currency);
+            }
         }
 
         const { generateInvoicePdfBuffer } = require('../utils/pdfGenerator');
@@ -3858,21 +3942,26 @@ const sendInvoiceEmail = async (req, res) => {
                 });
             }
 
-            const subtotal = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.subtotal) || 0), 0);
-            const discountAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.discountAmount) || 0), 0);
-            const taxableAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxableAmount) || 0), 0);
-            const taxAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxAmount) || 0), 0);
-            const otherCharges = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.otherCharges) || 0), 0);
-            const roundOffAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.roundOffAmount) || 0), 0);
-            const totalAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
-            const paidAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.paidAmount) || 0), 0);
-            const balanceAmount = customerInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || 0), 0);
+            const targetCurrency = company?.currency || customerInvoices[0]?.currency || 'EUR';
+            const convertedInvoices = await Promise.all(
+                customerInvoices.map(inv => convertInvoiceToCompanyCurrency(inv, targetCurrency))
+            );
+
+            const subtotal = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.subtotal) || 0), 0);
+            const discountAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.discountAmount) || 0), 0);
+            const taxableAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxableAmount) || 0), 0);
+            const taxAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.taxAmount) || 0), 0);
+            const otherCharges = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.otherCharges) || 0), 0);
+            const roundOffAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.roundOffAmount) || 0), 0);
+            const totalAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.totalAmount) || 0), 0);
+            const paidAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.paidAmount) || 0), 0);
+            const balanceAmount = convertedInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balanceAmount) || 0), 0);
             const allPaid = balanceAmount <= 0.01 && (totalAmount > 0 || paidAmount > 0);
-            const anyOverdue = customerInvoices.some(i => i.status === 'OVERDUE');
-            const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || customerInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
+            const anyOverdue = convertedInvoices.some(i => i.status === 'OVERDUE');
+            const hasPartial = (paidAmount > 0.01 && balanceAmount > 0.01) || convertedInvoices.some(i => i.status === 'PARTIAL' || i.status === 'PARTIALLY PAID');
             const combinedStatus = allPaid ? 'PAID' : (anyOverdue ? 'OVERDUE' : (hasPartial ? 'PARTIALLY PAID' : 'UNPAID'));
 
-            const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(customerInvoices, totalAmount);
+            const { allAllocations, paymentHistory } = buildCombinedInvoicePayments(convertedInvoices, totalAmount);
 
             invoice = {
                 id: rawId,
@@ -3890,10 +3979,10 @@ const sendInvoiceEmail = async (req, res) => {
                 balanceAmount,
                 status: combinedStatus,
                 manualStatus: false,
-                currency: customerInvoices[0]?.currency || company?.currency || 'EUR',
+                currency: targetCurrency,
                 customer: customer || { name: customer?.name || 'Customer', email: recipientEmail },
                 isCombined: true,
-                invoices: customerInvoices,
+                invoices: convertedInvoices,
                 allocations: allAllocations,
                 receipt: paymentHistory,
                 paymentHistory
@@ -3928,6 +4017,11 @@ const sendInvoiceEmail = async (req, res) => {
             }
 
             company = invoice.company || (companyId ? await prisma.company.findUnique({ where: { id: parseInt(companyId) } }) : null);
+
+            if (company?.currency && invoice?.currency && invoice.currency.toUpperCase() !== company.currency.toUpperCase()) {
+                invoice = await convertInvoiceToCompanyCurrency(invoice, company.currency);
+            }
+
             const targetId = invoice.invoiceNumber ? String(invoice.invoiceNumber).replace(/^#/, '') : invoice.id;
             publicUrl = `${clientBaseUrl}/api/public/invoice/${encodeURIComponent(targetId)}/download`;
         }
