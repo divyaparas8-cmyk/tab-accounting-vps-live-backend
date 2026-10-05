@@ -2684,6 +2684,167 @@ const getProfitLoss = async (req, res) => {
     }
 };
 
+// Helper to split a sales invoice, pos invoice, or purchase bill (or an allocated payment against it)
+// into rate-specific VAT transaction portions.
+// Ensures:
+// 1. Each line has its true statutory VAT rate (e.g. 23%, 0%, 13.5%). Never creates a fake blended rate like 20.6%.
+// 2. Taxable Net + VAT Amount = Gross Total on every row.
+// 3. Sum of rate Gross amounts = total gross payment/invoice amount.
+// 4. 0% / No-VAT items remain 0% VAT rate with €0 VAT.
+// 5. Payment ratio and exchange rate are applied exactly once.
+// 6. Discounts are correctly deducted from taxable base.
+const buildRatePortions = ({ doc, items, allocatedAmount, exRate = 1.0, baseTxData = {} }) => {
+    const alloc = parseFloat(allocatedAmount) || 0;
+    if (alloc <= 0) return [];
+
+    const totalDocAmount = parseFloat(doc?.totalAmount) || 0;
+    const totalDocTax = parseFloat(doc?.taxAmount) || 0;
+    const rawSubtotal = parseFloat(doc?.subtotal) || 0;
+    const rawDisc = parseFloat(doc?.discountAmount) || 0;
+    const netDocSubtotal = Math.max(0, rawSubtotal - rawDisc);
+
+    // Group items by statutory tax rate
+    const rateGroups = {};
+    let totalItemNet = 0;
+    if (items && items.length > 0) {
+        for (const it of items) {
+            const r = it.taxRate !== undefined && it.taxRate !== null ? parseFloat(it.taxRate) : 0;
+            const rKey = r.toFixed(1);
+
+            const itemNet = parseFloat(it.amount) !== undefined && !isNaN(parseFloat(it.amount))
+                ? parseFloat(it.amount)
+                : (parseFloat(it.quantity) || 0) * (parseFloat(it.rate) || 0) * (1 - (parseFloat(it.discount) || 0) / 100);
+
+            const taxFieldsSum = (parseFloat(it.cgstAmount) || 0) + (parseFloat(it.sgstAmount) || 0) + (parseFloat(it.igstAmount) || 0);
+            const itemTax = taxFieldsSum > 0 ? taxFieldsSum : (r > 0 ? (itemNet * (r / 100)) : 0);
+
+            if (!rateGroups[rKey]) {
+                rateGroups[rKey] = {
+                    rate: r,
+                    net: 0,
+                    tax: 0,
+                    gross: 0
+                };
+            }
+            rateGroups[rKey].net += itemNet;
+            rateGroups[rKey].tax += itemTax;
+            rateGroups[rKey].gross += (itemNet + itemTax);
+            totalItemNet += itemNet;
+        }
+    }
+
+    // If invoice-level discount exists and line items weren't individually discounted,
+    // scale rate group net and tax proportionally so discount applies across all rate groups.
+    if (totalItemNet > 0 && netDocSubtotal > 0 && Math.abs(totalItemNet - netDocSubtotal) > 0.01) {
+        const scale = netDocSubtotal / totalItemNet;
+        for (const key of Object.keys(rateGroups)) {
+            rateGroups[key].net = rateGroups[key].net * scale;
+            if (rateGroups[key].rate > 0) {
+                rateGroups[key].tax = rateGroups[key].net * (rateGroups[key].rate / 100);
+            } else {
+                rateGroups[key].tax = 0;
+            }
+            rateGroups[key].gross = rateGroups[key].net + rateGroups[key].tax;
+        }
+    }
+
+    const groups = Object.values(rateGroups).sort((a, b) => b.rate - a.rate);
+    const grossAllocated = Number((alloc * exRate).toFixed(2));
+    const payRatio = totalDocAmount > 0 ? Math.min(1.0, alloc / totalDocAmount) : 1.0;
+
+    if (groups.length === 0) {
+        // Fallback when no items are available (deduct discountAmount from subtotal)
+        const docNet = Math.max(0, (parseFloat(doc?.subtotal) || 0) - (parseFloat(doc?.discountAmount) || 0));
+        const taxAlloc = Number((totalDocTax * payRatio * exRate).toFixed(2));
+        const netAlloc = Number((grossAllocated - taxAlloc).toFixed(2));
+        let rate = 0;
+        if (netAlloc > 0 && taxAlloc > 0) {
+            const rawRate = (taxAlloc / netAlloc) * 100;
+            const standardRates = [23, 13.5, 9, 0];
+            const matched = standardRates.find(sr => Math.abs(sr - rawRate) <= 0.25);
+            rate = matched !== undefined ? matched : Number(rawRate.toFixed(1));
+        }
+        return [{
+            ...baseTxData,
+            id: baseTxData.idPrefix || 'TX-1',
+            taxableAmount: netAlloc,
+            vatRate: rate,
+            vatAmount: taxAlloc,
+            grossAmount: grossAllocated
+        }];
+    }
+
+    // Allocate across rate groups
+    const portions = [];
+    let allocatedGrossSum = 0;
+    let allocatedTaxSum = 0;
+
+    // Separate taxed groups vs 0% (zero/exempt) groups
+    const taxedGroups = groups.filter(g => g.rate > 0);
+    const zeroGroups = groups.filter(g => g.rate <= 0);
+
+    // Process taxed groups first
+    taxedGroups.forEach((g) => {
+        const pTax = Number((g.tax * payRatio * exRate).toFixed(2));
+        let pNet = Number((g.net * payRatio * exRate).toFixed(2));
+
+        // Align net with ideal rounded tax rate division if within 2 cents
+        if (g.rate > 0) {
+            const idealNet = Number((pTax / (g.rate / 100)).toFixed(2));
+            if (Math.abs(idealNet - pNet) <= 0.02) {
+                pNet = idealNet;
+            }
+        }
+
+        const pGross = Number((pNet + pTax).toFixed(2));
+
+        allocatedGrossSum += pGross;
+        allocatedTaxSum += pTax;
+
+        portions.push({
+            ...baseTxData,
+            id: groups.length > 1 ? `${baseTxData.idPrefix || 'TX'}-R${g.rate}` : (baseTxData.idPrefix || 'TX'),
+            taxableAmount: pNet,
+            vatRate: g.rate,
+            vatAmount: pTax,
+            grossAmount: pGross
+        });
+    });
+
+    // Process zero-rated groups
+    if (zeroGroups.length > 0) {
+        const sumZeroNet = zeroGroups.reduce((s, g) => s + g.net, 0);
+        const remainingGross = Number((grossAllocated - allocatedGrossSum).toFixed(2));
+
+        let currentZeroGrossSum = 0;
+        zeroGroups.forEach((g, idx) => {
+            const isLast = idx === zeroGroups.length - 1;
+            const share = sumZeroNet > 0 ? (g.net / sumZeroNet) : (1 / zeroGroups.length);
+            const pGross = isLast
+                ? Number((remainingGross - currentZeroGrossSum).toFixed(2))
+                : Number((remainingGross * share).toFixed(2));
+            currentZeroGrossSum += pGross;
+
+            portions.push({
+                ...baseTxData,
+                id: groups.length > 1 ? `${baseTxData.idPrefix || 'TX'}-R${g.rate}` : (baseTxData.idPrefix || 'TX'),
+                taxableAmount: pGross,
+                vatRate: 0,
+                vatAmount: 0,
+                grossAmount: pGross
+            });
+        });
+    } else if (portions.length > 0 && Math.abs(grossAllocated - allocatedGrossSum) > 0.001) {
+        // No zero rate groups, adjust pennies on the last taxed group
+        const diff = Number((grossAllocated - allocatedGrossSum).toFixed(2));
+        const lastPortion = portions[portions.length - 1];
+        lastPortion.grossAmount = Number((lastPortion.grossAmount + diff).toFixed(2));
+        lastPortion.taxableAmount = Number((lastPortion.grossAmount - lastPortion.vatAmount).toFixed(2));
+    }
+
+    return portions;
+};
+
 // Get VAT Report (Detailed Transaction List + Date Range Filter)
 const getVatReport = async (req, res) => {
     try {
@@ -2777,49 +2938,32 @@ const getVatReport = async (req, res) => {
 
                         if (inv && inv.totalAmount > 0 && allocAmount > 0) {
                             const exRate = await getConversionRate(inv.currency || companyCurrency, companyCurrency);
-                            const payRatio = Math.min(1.0, allocAmount / inv.totalAmount);
-                            const taxable = (parseFloat(inv.subtotal) || 0) * payRatio * exRate;
-                            const tax = (parseFloat(inv.taxAmount) || 0) * payRatio * exRate;
-                            const gross = allocAmount * exRate;
-                            const rate = taxable > 0 ? Number(((tax / taxable) * 100).toFixed(1)) : 0;
-
-                            const itemsBreakdown = [];
-                            if (inv.invoiceitem && inv.invoiceitem.length > 0) {
-                                const rMap = {};
-                                for (const it of inv.invoiceitem) {
-                                    const r = it.taxRate !== undefined && it.taxRate !== null ? parseFloat(it.taxRate) : 0;
-                                    const itTaxable = (parseFloat(it.amount) || (parseFloat(it.quantity) * parseFloat(it.rate) * (1 - (parseFloat(it.discount) || 0) / 100))) * payRatio * exRate;
-                                    const itTax = (parseFloat(it.taxAmount) || (itTaxable * (r / 100))) * payRatio * exRate;
-                                    if (!rMap[r]) rMap[r] = { rate: r, taxable: 0, tax: 0 };
-                                    rMap[r].taxable += itTaxable;
-                                    rMap[r].tax += itTax;
+                            const portions = buildRatePortions({
+                                doc: inv,
+                                items: inv.invoiceitem,
+                                allocatedAmount: allocAmount,
+                                exRate,
+                                baseTxData: {
+                                    idPrefix: `REC-${rec.id}-ALLOC-${alloc.id}`,
+                                    invoiceId: inv.id,
+                                    isPos: false,
+                                    type: 'Sales Receipt (Allocated)',
+                                    docNumber: rec.receiptNumber,
+                                    refNumber: inv.invoiceNumber,
+                                    partyName: custName,
+                                    date: rec.date,
+                                    status: 'Received',
+                                    paymentMode: rec.paymentMode
                                 }
-                                for (const k in rMap) itemsBreakdown.push(rMap[k]);
-                            }
-
-                            outputVatTransactions.push({
-                                id: `REC-${rec.id}-ALLOC-${alloc.id}`,
-                                invoiceId: inv.id,
-                                isPos: false,
-                                type: 'Sales Receipt (Allocated)',
-                                docNumber: rec.receiptNumber,
-                                refNumber: inv.invoiceNumber,
-                                partyName: custName,
-                                date: rec.date,
-                                taxableAmount: taxable,
-                                vatRate: rate,
-                                vatAmount: tax,
-                                grossAmount: gross,
-                                status: 'Received',
-                                paymentMode: rec.paymentMode,
-                                itemsBreakdown: itemsBreakdown.length > 0 ? itemsBreakdown : undefined
                             });
+                            outputVatTransactions.push(...portions);
                         }
                     }
 
                     const unallocated = (parseFloat(rec.amount) || 0) - totalAllocated;
                     if (unallocated > 0.01) {
                         const exRate = await getConversionRate(companyCurrency, companyCurrency);
+                        const grossUnalloc = Number((unallocated * exRate).toFixed(2));
                         outputVatTransactions.push({
                             id: `REC-${rec.id}-ADV`,
                             type: 'Sales Advance',
@@ -2827,10 +2971,10 @@ const getVatReport = async (req, res) => {
                             refNumber: 'Unallocated Deposit',
                             partyName: custName,
                             date: rec.date,
-                            taxableAmount: unallocated * exRate,
+                            taxableAmount: grossUnalloc,
                             vatRate: 0,
                             vatAmount: 0,
-                            grossAmount: unallocated * exRate,
+                            grossAmount: grossUnalloc,
                             status: 'Received',
                             paymentMode: rec.paymentMode
                         });
@@ -2838,46 +2982,28 @@ const getVatReport = async (req, res) => {
                 } else if (rec.invoice && rec.invoice.totalAmount > 0) {
                     const inv = rec.invoice;
                     const exRate = await getConversionRate(inv.currency || companyCurrency, companyCurrency);
-                    const payRatio = Math.min(1.0, (parseFloat(rec.amount) || 0) / inv.totalAmount);
-                    const taxable = (parseFloat(inv.subtotal) || 0) * payRatio * exRate;
-                    const tax = (parseFloat(inv.taxAmount) || 0) * payRatio * exRate;
-                    const gross = (parseFloat(rec.amount) || 0) * exRate;
-                    const rate = taxable > 0 ? Number(((tax / taxable) * 100).toFixed(1)) : 0;
-
-                    const itemsBreakdown = [];
-                    if (inv.invoiceitem && inv.invoiceitem.length > 0) {
-                        const rMap = {};
-                        for (const it of inv.invoiceitem) {
-                            const r = it.taxRate !== undefined && it.taxRate !== null ? parseFloat(it.taxRate) : 0;
-                            const itTaxable = (parseFloat(it.amount) || (parseFloat(it.quantity) * parseFloat(it.rate) * (1 - (parseFloat(it.discount) || 0) / 100))) * payRatio * exRate;
-                            const itTax = (parseFloat(it.taxAmount) || (itTaxable * (r / 100))) * payRatio * exRate;
-                            if (!rMap[r]) rMap[r] = { rate: r, taxable: 0, tax: 0 };
-                            rMap[r].taxable += itTaxable;
-                            rMap[r].tax += itTax;
+                    const portions = buildRatePortions({
+                        doc: inv,
+                        items: inv.invoiceitem,
+                        allocatedAmount: parseFloat(rec.amount) || 0,
+                        exRate,
+                        baseTxData: {
+                            idPrefix: `REC-${rec.id}`,
+                            invoiceId: inv.id,
+                            isPos: false,
+                            type: 'Sales Receipt',
+                            docNumber: rec.receiptNumber,
+                            refNumber: inv.invoiceNumber,
+                            partyName: custName,
+                            date: rec.date,
+                            status: 'Received',
+                            paymentMode: rec.paymentMode
                         }
-                        for (const k in rMap) itemsBreakdown.push(rMap[k]);
-                    }
-
-                    outputVatTransactions.push({
-                        id: `REC-${rec.id}`,
-                        invoiceId: inv.id,
-                        isPos: false,
-                        type: 'Sales Receipt',
-                        docNumber: rec.receiptNumber,
-                        refNumber: inv.invoiceNumber,
-                        partyName: custName,
-                        date: rec.date,
-                        taxableAmount: taxable,
-                        vatRate: rate,
-                        vatAmount: tax,
-                        grossAmount: gross,
-                        status: 'Received',
-                        paymentMode: rec.paymentMode,
-                        itemsBreakdown: itemsBreakdown.length > 0 ? itemsBreakdown : undefined
                     });
+                    outputVatTransactions.push(...portions);
                 } else {
                     const exRate = await getConversionRate(companyCurrency, companyCurrency);
-                    const gross = (parseFloat(rec.amount) || 0) * exRate;
+                    const gross = Number(((parseFloat(rec.amount) || 0) * exRate).toFixed(2));
                     outputVatTransactions.push({
                         id: `REC-${rec.id}`,
                         type: 'Sales Advance',
@@ -2901,32 +3027,35 @@ const getVatReport = async (req, res) => {
                     companyId: companyIdInt,
                     date: { gte: startDate, lte: endDate }
                 },
-                include: { customer: { select: { name: true } } }
+                include: {
+                    customer: { select: { name: true } },
+                    posinvoiceitem: true
+                }
             });
 
             for (const pos of posInvoices) {
                 const exRate = await getConversionRate(pos.currency || histCurr, companyCurrency);
-                const taxable = (parseFloat(pos.subtotal) || 0) * exRate;
-                const tax = (parseFloat(pos.taxAmount) || 0) * exRate;
-                const rate = taxable > 0 ? Number(((tax / taxable) * 100).toFixed(1)) : 0;
                 const custName = pos.customer ? pos.customer.name : 'Walk-in Customer';
-
-                outputVatTransactions.push({
-                    id: `POS-${pos.id}`,
-                    invoiceId: pos.id,
-                    isPos: true,
-                    type: 'POS Cash Sale',
-                    docNumber: pos.invoiceNumber,
-                    refNumber: '-',
-                    partyName: custName,
-                    date: pos.date || pos.createdAt,
-                    taxableAmount: taxable,
-                    vatRate: rate,
-                    vatAmount: tax,
-                    grossAmount: (taxable + tax),
-                    status: 'Paid',
-                    paymentMode: 'Cash / Card'
+                const posTotal = parseFloat(pos.totalAmount) || (parseFloat(pos.subtotal) + parseFloat(pos.taxAmount));
+                const portions = buildRatePortions({
+                    doc: pos,
+                    items: pos.posinvoiceitem,
+                    allocatedAmount: posTotal,
+                    exRate,
+                    baseTxData: {
+                        idPrefix: `POS-${pos.id}`,
+                        invoiceId: pos.id,
+                        isPos: true,
+                        type: 'POS Cash Sale',
+                        docNumber: pos.invoiceNumber,
+                        refNumber: '-',
+                        partyName: custName,
+                        date: pos.date || pos.createdAt,
+                        status: 'Paid',
+                        paymentMode: 'Cash / Card'
+                    }
                 });
+                outputVatTransactions.push(...portions);
             }
 
             // 3. Purchase Payments (Payments made on Purchase Bills - Cash Basis)
@@ -2963,47 +3092,30 @@ const getVatReport = async (req, res) => {
 
                         if (bill && bill.totalAmount > 0 && allocAmount > 0) {
                             const exRate = await getConversionRate(bill.currency || companyCurrency, companyCurrency);
-                            const payRatio = Math.min(1.0, allocAmount / bill.totalAmount);
-                            const taxable = (parseFloat(bill.subtotal) || 0) * payRatio * exRate;
-                            const tax = (parseFloat(bill.taxAmount) || 0) * payRatio * exRate;
-                            const gross = allocAmount * exRate;
-                            const rate = taxable > 0 ? Number(((tax / taxable) * 100).toFixed(1)) : 0;
-
-                            const itemsBreakdown = [];
-                            if (bill.purchasebillitem && bill.purchasebillitem.length > 0) {
-                                const rMap = {};
-                                for (const it of bill.purchasebillitem) {
-                                    const r = it.taxRate !== undefined && it.taxRate !== null ? parseFloat(it.taxRate) : 0;
-                                    const itTaxable = (parseFloat(it.amount) || (parseFloat(it.quantity) * parseFloat(it.rate) * (1 - (parseFloat(it.discount) || 0) / 100))) * payRatio * exRate;
-                                    const itTax = (parseFloat(it.taxAmount) || (itTaxable * (r / 100))) * payRatio * exRate;
-                                    if (!rMap[r]) rMap[r] = { rate: r, taxable: 0, tax: 0 };
-                                    rMap[r].taxable += itTaxable;
-                                    rMap[r].tax += itTax;
+                            const portions = buildRatePortions({
+                                doc: bill,
+                                items: bill.purchasebillitem,
+                                allocatedAmount: allocAmount,
+                                exRate,
+                                baseTxData: {
+                                    idPrefix: `PAY-${p.id}-ALLOC-${alloc.id}`,
+                                    type: 'Purchase Payment (Allocated)',
+                                    docNumber: p.paymentNumber || `PAY-${p.id}`,
+                                    refNumber: bill.billNumber,
+                                    partyName: vendorName,
+                                    date: p.date,
+                                    status: 'Paid',
+                                    paymentMode: p.paymentMode
                                 }
-                                for (const k in rMap) itemsBreakdown.push(rMap[k]);
-                            }
-
-                            inputVatTransactions.push({
-                                id: `PAY-${p.id}-ALLOC-${alloc.id}`,
-                                type: 'Purchase Payment (Allocated)',
-                                docNumber: p.paymentNumber || `PAY-${p.id}`,
-                                refNumber: bill.billNumber,
-                                partyName: vendorName,
-                                date: p.date,
-                                taxableAmount: taxable,
-                                vatRate: rate,
-                                vatAmount: tax,
-                                grossAmount: gross,
-                                status: 'Paid',
-                                paymentMode: p.paymentMode,
-                                itemsBreakdown: itemsBreakdown.length > 0 ? itemsBreakdown : undefined
                             });
+                            inputVatTransactions.push(...portions);
                         }
                     }
 
                     const unallocated = (parseFloat(p.amount) || 0) - totalAllocated;
                     if (unallocated > 0.01) {
                         const exRate = await getConversionRate(companyCurrency, companyCurrency);
+                        const grossUnalloc = Number((unallocated * exRate).toFixed(2));
                         inputVatTransactions.push({
                             id: `PAY-${p.id}-ADV`,
                             type: 'Vendor Advance',
@@ -3011,10 +3123,10 @@ const getVatReport = async (req, res) => {
                             refNumber: 'Unallocated Payment',
                             partyName: vendorName,
                             date: p.date,
-                            taxableAmount: unallocated * exRate,
+                            taxableAmount: grossUnalloc,
                             vatRate: 0,
                             vatAmount: 0,
-                            grossAmount: unallocated * exRate,
+                            grossAmount: grossUnalloc,
                             status: 'Paid',
                             paymentMode: p.paymentMode
                         });
@@ -3022,44 +3134,26 @@ const getVatReport = async (req, res) => {
                 } else if (p.purchasebill && p.purchasebill.totalAmount > 0) {
                     const bill = p.purchasebill;
                     const exRate = await getConversionRate(bill.currency || companyCurrency, companyCurrency);
-                    const payRatio = Math.min(1.0, (parseFloat(p.amount) || 0) / bill.totalAmount);
-                    const taxable = (parseFloat(bill.subtotal) || 0) * payRatio * exRate;
-                    const tax = (parseFloat(bill.taxAmount) || 0) * payRatio * exRate;
-                    const gross = (parseFloat(p.amount) || 0) * exRate;
-                    const rate = taxable > 0 ? Number(((tax / taxable) * 100).toFixed(1)) : 0;
-
-                    const itemsBreakdown = [];
-                    if (bill.purchasebillitem && bill.purchasebillitem.length > 0) {
-                        const rMap = {};
-                        for (const it of bill.purchasebillitem) {
-                            const r = it.taxRate !== undefined && it.taxRate !== null ? parseFloat(it.taxRate) : 0;
-                            const itTaxable = (parseFloat(it.amount) || (parseFloat(it.quantity) * parseFloat(it.rate) * (1 - (parseFloat(it.discount) || 0) / 100))) * payRatio * exRate;
-                            const itTax = (parseFloat(it.taxAmount) || (itTaxable * (r / 100))) * payRatio * exRate;
-                            if (!rMap[r]) rMap[r] = { rate: r, taxable: 0, tax: 0 };
-                            rMap[r].taxable += itTaxable;
-                            rMap[r].tax += itTax;
+                    const portions = buildRatePortions({
+                        doc: bill,
+                        items: bill.purchasebillitem,
+                        allocatedAmount: parseFloat(p.amount) || 0,
+                        exRate,
+                        baseTxData: {
+                            idPrefix: `PAY-${p.id}`,
+                            type: 'Purchase Payment',
+                            docNumber: p.paymentNumber || `PAY-${p.id}`,
+                            refNumber: bill.billNumber,
+                            partyName: vendorName,
+                            date: p.date,
+                            status: 'Paid',
+                            paymentMode: p.paymentMode
                         }
-                        for (const k in rMap) itemsBreakdown.push(rMap[k]);
-                    }
-
-                    inputVatTransactions.push({
-                        id: `PAY-${p.id}`,
-                        type: 'Purchase Payment',
-                        docNumber: p.paymentNumber || `PAY-${p.id}`,
-                        refNumber: bill.billNumber,
-                        partyName: vendorName,
-                        date: p.date,
-                        taxableAmount: taxable,
-                        vatRate: rate,
-                        vatAmount: tax,
-                        grossAmount: gross,
-                        status: 'Paid',
-                        paymentMode: p.paymentMode,
-                        itemsBreakdown: itemsBreakdown.length > 0 ? itemsBreakdown : undefined
                     });
+                    inputVatTransactions.push(...portions);
                 } else {
                     const exRate = await getConversionRate(companyCurrency, companyCurrency);
-                    const gross = (parseFloat(p.amount) || 0) * exRate;
+                    const gross = Number(((parseFloat(p.amount) || 0) * exRate).toFixed(2));
                     inputVatTransactions.push({
                         id: `PAY-${p.id}`,
                         type: 'Vendor Advance',
@@ -3087,7 +3181,7 @@ const getVatReport = async (req, res) => {
 
             for (const exp of expenses) {
                 const exRate = await getConversionRate(companyCurrency, companyCurrency);
-                const gross = (parseFloat(exp.amount) || 0) * exRate;
+                const gross = Number(((parseFloat(exp.amount) || 0) * exRate).toFixed(2));
                 inputVatTransactions.push({
                     id: `EXP-${exp.id}`,
                     type: 'Expense',
@@ -3113,31 +3207,32 @@ const getVatReport = async (req, res) => {
                     companyId: companyIdInt,
                     date: { gte: startDate, lte: endDate }
                 },
-                include: { customer: { select: { name: true } } }
+                include: {
+                    customer: { select: { name: true } },
+                    invoiceitem: true
+                }
             });
 
             for (const inv of invoices) {
                 const exRate = await getConversionRate(inv.currency || 'USD', companyCurrency);
-                const taxable = Math.max(0, (parseFloat(inv.subtotal) || 0) - (parseFloat(inv.discountAmount) || 0)) * exRate;
-                const tax = (parseFloat(inv.taxAmount) || 0) * exRate;
-                const rate = taxable > 0 ? Number(((tax / taxable) * 100).toFixed(1)) : 0;
-                const gross = (parseFloat(inv.totalAmount) || 0) * exRate;
-
-                outputVatTransactions.push({
-                    id: `INV-${inv.id}`,
-                    invoiceId: inv.id,
-                    isPos: false,
-                    type: 'Sales Invoice',
-                    docNumber: inv.invoiceNumber,
-                    refNumber: '-',
-                    partyName: inv.customer?.name || 'Customer',
-                    date: inv.date,
-                    taxableAmount: taxable,
-                    vatRate: rate,
-                    vatAmount: tax,
-                    grossAmount: gross,
-                    status: inv.status || 'UNPAID'
+                const portions = buildRatePortions({
+                    doc: inv,
+                    items: inv.invoiceitem,
+                    allocatedAmount: parseFloat(inv.totalAmount) || 0,
+                    exRate,
+                    baseTxData: {
+                        idPrefix: `INV-${inv.id}`,
+                        invoiceId: inv.id,
+                        isPos: false,
+                        type: 'Sales Invoice',
+                        docNumber: inv.invoiceNumber,
+                        refNumber: '-',
+                        partyName: inv.customer?.name || 'Customer',
+                        date: inv.date,
+                        status: inv.status || 'UNPAID'
+                    }
                 });
+                outputVatTransactions.push(...portions);
             }
 
             // 2. POS Sales
@@ -3146,31 +3241,33 @@ const getVatReport = async (req, res) => {
                     companyId: companyIdInt,
                     date: { gte: startDate, lte: endDate }
                 },
-                include: { customer: { select: { name: true } } }
+                include: {
+                    customer: { select: { name: true } },
+                    posinvoiceitem: true
+                }
             });
 
             for (const pos of posInvoices) {
                 const exRate = await getConversionRate(pos.currency || histCurr, companyCurrency);
-                const taxable = (parseFloat(pos.subtotal) || 0) * exRate;
-                const tax = (parseFloat(pos.taxAmount) || 0) * exRate;
-                const rate = taxable > 0 ? Number(((tax / taxable) * 100).toFixed(1)) : 0;
                 const custName = pos.customer ? pos.customer.name : 'Walk-in Customer';
-
-                outputVatTransactions.push({
-                    id: `POS-${pos.id}`,
-                    invoiceId: pos.id,
-                    isPos: true,
-                    type: 'POS Invoice',
-                    docNumber: pos.invoiceNumber,
-                    refNumber: '-',
-                    partyName: custName,
-                    date: pos.date || pos.createdAt,
-                    taxableAmount: taxable,
-                    vatRate: rate,
-                    vatAmount: tax,
-                    grossAmount: (taxable + tax),
-                    status: pos.status || 'PAID'
+                const portions = buildRatePortions({
+                    doc: pos,
+                    items: pos.posinvoiceitem,
+                    allocatedAmount: parseFloat(pos.totalAmount) || 0,
+                    exRate,
+                    baseTxData: {
+                        idPrefix: `POS-${pos.id}`,
+                        invoiceId: pos.id,
+                        isPos: true,
+                        type: 'POS Invoice',
+                        docNumber: pos.invoiceNumber,
+                        refNumber: '-',
+                        partyName: custName,
+                        date: pos.date || pos.createdAt,
+                        status: pos.status || 'PAID'
+                    }
                 });
+                outputVatTransactions.push(...portions);
             }
 
             // 3. Sales Returns (Credit Notes - Offsets Sales)
@@ -3184,7 +3281,7 @@ const getVatReport = async (req, res) => {
 
             for (const sr of salesReturns) {
                 const exRate = await getConversionRate('USD', companyCurrency);
-                const gross = (parseFloat(sr.totalAmount) || 0) * exRate;
+                const gross = Number(((parseFloat(sr.totalAmount) || 0) * exRate).toFixed(2));
                 const taxable = gross;
                 outputVatTransactions.push({
                     id: `SR-${sr.id}`,
@@ -3207,29 +3304,30 @@ const getVatReport = async (req, res) => {
                     companyId: companyIdInt,
                     date: { gte: startDate, lte: endDate }
                 },
-                include: { vendor: { select: { name: true } } }
+                include: {
+                    vendor: { select: { name: true } },
+                    purchasebillitem: true
+                }
             });
 
             for (const bill of bills) {
                 const exRate = await getConversionRate(bill.currency || companyCurrency || 'EUR', companyCurrency);
-                const taxable = (parseFloat(bill.subtotal) || 0) * exRate;
-                const tax = (parseFloat(bill.taxAmount) || 0) * exRate;
-                const rate = taxable > 0 ? Number(((tax / taxable) * 100).toFixed(1)) : 0;
-                const gross = (parseFloat(bill.totalAmount) || 0) * exRate;
-
-                inputVatTransactions.push({
-                    id: `BILL-${bill.id}`,
-                    type: 'Purchase Bill',
-                    docNumber: bill.billNumber,
-                    refNumber: '-',
-                    partyName: bill.vendor?.name || 'Vendor',
-                    date: bill.date,
-                    taxableAmount: taxable,
-                    vatRate: rate,
-                    vatAmount: tax,
-                    grossAmount: gross,
-                    status: bill.status || 'UNPAID'
+                const portions = buildRatePortions({
+                    doc: bill,
+                    items: bill.purchasebillitem,
+                    allocatedAmount: parseFloat(bill.totalAmount) || 0,
+                    exRate,
+                    baseTxData: {
+                        idPrefix: `BILL-${bill.id}`,
+                        type: 'Purchase Bill',
+                        docNumber: bill.billNumber,
+                        refNumber: '-',
+                        partyName: bill.vendor?.name || 'Vendor',
+                        date: bill.date,
+                        status: bill.status || 'UNPAID'
+                    }
                 });
+                inputVatTransactions.push(...portions);
             }
 
             // 5. Purchase Returns (Debit Notes - Offsets Purchases)
@@ -3243,7 +3341,7 @@ const getVatReport = async (req, res) => {
 
             for (const pr of purchaseReturns) {
                 const exRate = await getConversionRate('USD', companyCurrency);
-                const gross = (parseFloat(pr.totalAmount) || 0) * exRate;
+                const gross = Number(((parseFloat(pr.totalAmount) || 0) * exRate).toFixed(2));
                 inputVatTransactions.push({
                     id: `PR-${pr.id}`,
                     type: 'Debit Note (Return)',
@@ -3265,25 +3363,26 @@ const getVatReport = async (req, res) => {
         inputVatTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         // Aggregate Totals
-        const totalTaxableSales = outputVatTransactions.reduce((acc, it) => acc + it.taxableAmount, 0);
-        const outputVatTotal = outputVatTransactions.reduce((acc, it) => acc + it.vatAmount, 0);
-        const totalGrossSales = outputVatTransactions.reduce((acc, it) => acc + it.grossAmount, 0);
+        const totalTaxableSales = Number(outputVatTransactions.reduce((acc, it) => acc + it.taxableAmount, 0).toFixed(2));
+        const outputVatTotal = Number(outputVatTransactions.reduce((acc, it) => acc + it.vatAmount, 0).toFixed(2));
+        const totalGrossSales = Number(outputVatTransactions.reduce((acc, it) => acc + it.grossAmount, 0).toFixed(2));
 
-        const totalTaxablePurchases = inputVatTransactions.reduce((acc, it) => acc + it.taxableAmount, 0);
-        const inputVatTotal = inputVatTransactions.reduce((acc, it) => acc + it.vatAmount, 0);
-        const totalGrossPurchases = inputVatTransactions.reduce((acc, it) => acc + it.grossAmount, 0);
+        const totalTaxablePurchases = Number(inputVatTransactions.reduce((acc, it) => acc + it.taxableAmount, 0).toFixed(2));
+        const inputVatTotal = Number(inputVatTransactions.reduce((acc, it) => acc + it.vatAmount, 0).toFixed(2));
+        const totalGrossPurchases = Number(inputVatTransactions.reduce((acc, it) => acc + it.grossAmount, 0).toFixed(2));
 
         // T3: Net VAT Payable to Tax Authority (Positive: Payable, Negative: Refund Due)
-        const netVatPayable = outputVatTotal - inputVatTotal;
+        const netVatPayable = Number((outputVatTotal - inputVatTotal).toFixed(2));
 
         // Rate Breakdown Table (23%, 13.5%, 9%, 0%, Exempt)
         const rateMap = {};
         const registerRate = (rate, taxable, vat, type) => {
-            const key = rate !== undefined && rate !== null ? Number(rate).toFixed(1) : '0.0';
+            const numRate = rate !== undefined && rate !== null ? Number(rate) : 0;
+            const key = numRate.toFixed(1);
             if (!rateMap[key]) {
                 rateMap[key] = {
-                    rate: Number(key),
-                    rateLabel: `${Number(key)}%`,
+                    rate: numRate,
+                    rateLabel: `${numRate}%`,
                     salesTaxable: 0,
                     salesVat: 0,
                     purchasesTaxable: 0,
@@ -3292,28 +3391,20 @@ const getVatReport = async (req, res) => {
                 };
             }
             if (type === 'sales') {
-                rateMap[key].salesTaxable += taxable;
-                rateMap[key].salesVat += vat;
+                rateMap[key].salesTaxable = Number((rateMap[key].salesTaxable + taxable).toFixed(2));
+                rateMap[key].salesVat = Number((rateMap[key].salesVat + vat).toFixed(2));
             } else {
-                rateMap[key].purchasesTaxable += taxable;
-                rateMap[key].purchasesVat += vat;
+                rateMap[key].purchasesTaxable = Number((rateMap[key].purchasesTaxable + taxable).toFixed(2));
+                rateMap[key].purchasesVat = Number((rateMap[key].purchasesVat + vat).toFixed(2));
             }
-            rateMap[key].netVat = rateMap[key].salesVat - rateMap[key].purchasesVat;
+            rateMap[key].netVat = Number((rateMap[key].salesVat - rateMap[key].purchasesVat).toFixed(2));
         };
 
         outputVatTransactions.forEach(t => {
-            if (t.itemsBreakdown && t.itemsBreakdown.length > 0) {
-                t.itemsBreakdown.forEach(b => registerRate(b.rate, b.taxable, b.tax, 'sales'));
-            } else {
-                registerRate(t.vatRate, t.taxableAmount, t.vatAmount, 'sales');
-            }
+            registerRate(t.vatRate, t.taxableAmount, t.vatAmount, 'sales');
         });
         inputVatTransactions.forEach(t => {
-            if (t.itemsBreakdown && t.itemsBreakdown.length > 0) {
-                t.itemsBreakdown.forEach(b => registerRate(b.rate, b.taxable, b.tax, 'purchases'));
-            } else {
-                registerRate(t.vatRate, t.taxableAmount, t.vatAmount, 'purchases');
-            }
+            registerRate(t.vatRate, t.taxableAmount, t.vatAmount, 'purchases');
         });
 
         const rateBreakdown = Object.values(rateMap).sort((a, b) => b.rate - a.rate);
@@ -3322,9 +3413,12 @@ const getVatReport = async (req, res) => {
         const allTransactions = [
             ...outputVatTransactions.map(t => ({
                 id: t.id,
+                invoiceId: t.invoiceId,
                 type: 'Sales',
                 docType: t.type,
                 docNumber: t.docNumber,
+                refNumber: t.refNumber,
+                partyName: t.partyName,
                 description: `${t.type} #${t.docNumber} - ${t.partyName}`,
                 taxableAmount: t.taxableAmount,
                 vatAmount: t.vatAmount,
@@ -3337,6 +3431,8 @@ const getVatReport = async (req, res) => {
                 type: 'Purchase',
                 docType: t.type,
                 docNumber: t.docNumber,
+                refNumber: t.refNumber,
+                partyName: t.partyName,
                 description: `${t.type} #${t.docNumber} - ${t.partyName}`,
                 taxableAmount: t.taxableAmount,
                 vatAmount: t.vatAmount,
